@@ -123,11 +123,6 @@
   /* ── NO SERIAL WARNING ── */
   .no-serial { display:none; padding:12px 20px; background:rgba(255,34,68,0.1); border-bottom:1px solid var(--danger); color:var(--danger); font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:1px; }
 
-  /* ── SERVER OFFLINE WARNING ── */
-  .server-warn { display:none; padding:10px 20px; background:rgba(255,107,0,0.08); border-bottom:1px solid var(--accent2); color:var(--accent2); font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:1px; align-items:center; gap:12px; }
-  .server-warn.show { display:flex; }
-  .server-warn a { color:var(--accent2); text-decoration:underline; cursor:pointer; }
-
   /* ── MAIN DASHBOARD LAYOUT ── */
   .dashboard { flex:1; display:flex; overflow:hidden; gap:1px; background:var(--border); min-height:0; }
 
@@ -491,23 +486,6 @@
   .benchmark-banner.active { display: flex; }
   .bm-countdown { font-size: 20px; font-weight: 900; color: var(--warn); margin-left: auto; }
 
-  /* ── BENCHMARK RESULT PANEL ── */
-  .bm-result-panel {
-    display: none; flex-shrink: 0;
-    background: rgba(57,255,20,0.05); border-bottom: 1px solid var(--accent3);
-    padding: 8px 16px; gap: 16px; align-items: flex-start; flex-wrap: wrap;
-  }
-  .bm-result-panel.show { display: flex; }
-  .bm-result-close { margin-left:auto; font-family:var(--display); font-weight:700; font-size:10px; letter-spacing:1px; cursor:pointer; color:var(--text3); background:none; border:none; padding:2px 6px; }
-  .bm-result-close:hover { color:var(--danger); }
-  .bm-result-label { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
-  .bm-result-val { font-family:var(--display); font-weight:900; font-size:20px; color:var(--accent3); }
-  .bm-result-rating { font-size:28px; }
-  .bm-kv-table { border-collapse:collapse; font-size:11px; }
-  .bm-kv-table th { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:2px; color:var(--text3); padding:2px 8px; border-bottom:1px solid var(--border); }
-  .bm-kv-table td { padding:2px 8px; color:var(--text2); text-align:right; }
-  .bm-kv-table td:first-child { color:var(--accent2); font-family:var(--display); font-weight:700; text-align:left; }
-
   /* ── MOTOR ROSTER TABLE ── */
   .roster-wrap { flex: 1; overflow-y: auto; padding: 12px 16px; min-height: 0; }
   .roster-table { width: 100%; border-collapse: collapse; font-size: 11px; }
@@ -581,11 +559,6 @@
   ⚠ Web Serial API not supported. Use <strong>Chrome</strong> or <strong>Edge</strong> (desktop).
 </div>
 
-<div class="server-warn" id="serverWarn">
-  ⚠ Local server not running — Motor Registry and Program Library will not save.
-  Start <strong>START MBC2 DASHBOARD.bat</strong> (Windows) or <strong>Start MBC2 Dashboard.command</strong> (Mac) to launch the server.
-</div>
-
 <!-- HEADER -->
 <header>
   <div class="logo">
@@ -627,34 +600,6 @@
 <div class="benchmark-banner" id="benchmarkBanner">
   ⚡ BENCHMARK MODE — 1.0→3.0V · R Direction · 3 min (5 steps)
   <span id="bmCountdown" class="bm-countdown">2:00</span>
-</div>
-
-<!-- BENCHMARK RESULT PANEL -->
-<div class="bm-result-panel" id="bmResultPanel">
-  <div>
-    <div class="bm-result-label">Peak RPM</div>
-    <div class="bm-result-val" id="bmResPeakRpm">—</div>
-  </div>
-  <div>
-    <div class="bm-result-label">Avg RPM/W</div>
-    <div class="bm-result-val" id="bmResRpmPerWatt">—</div>
-  </div>
-  <div>
-    <div class="bm-result-label">Avg Current @ 3V</div>
-    <div class="bm-result-val" id="bmResAmps">—</div>
-  </div>
-  <div>
-    <div class="bm-result-label">Rating</div>
-    <div class="bm-result-val bm-result-rating" id="bmResRating">—</div>
-  </div>
-  <div>
-    <div class="bm-result-label">kV by Voltage Step</div>
-    <table class="bm-kv-table" id="bmResKvTable">
-      <thead><tr><th>Step</th><th>kV</th><th>Amps</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <button class="bm-result-close" onclick="document.getElementById('bmResultPanel').classList.remove('show')">✕ Close</button>
 </div>
 
 <!-- DASHBOARD -->
@@ -801,10 +746,6 @@
       <div class="prog-detail"><span class="prog-detail-label">STEP</span><span class="prog-detail-value" id="progStep">—</span></div>
       <div class="prog-detail"><span class="prog-detail-label">TARGET</span><span class="prog-detail-value" id="progTarget">—</span></div>
       <div class="prog-detail"><span class="prog-detail-label">TIME LEFT</span><span class="prog-detail-value" id="progTime">—</span></div>
-      <div class="prog-detail" id="cooldownRow" style="display:none;">
-        <span class="prog-detail-label" style="color:var(--accent);">COOLING</span>
-        <span class="prog-detail-value" id="progCooldown" style="color:var(--accent);font-size:20px;">—</span>
-      </div>
     </div>
     <div class="prog-section">
       <div class="chart-label">Steps</div>
@@ -825,12 +766,6 @@
     </div>
     <div class="prog-section" style="flex:1;overflow-y:auto;">
       <div class="chart-label">Sessions</div>
-      <div style="margin-bottom:6px;">
-        <input type="text" id="sessionNotes" placeholder="Notes (lube, conditions...)" style="width:100%;font-family:var(--mono);font-size:10px;padding:4px 6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;margin-bottom:4px;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input type="number" id="ambientTemp" placeholder="Ambient °C" min="-20" max="60" step="0.5" style="width:100%;font-family:var(--mono);font-size:10px;padding:4px 6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
-        </div>
-      </div>
       <div class="session-list" id="sessionList">
         <span style="color:var(--text3);font-size:11px;">No saved sessions</span>
       </div>
@@ -850,7 +785,7 @@
 
 <!-- FOOTER -->
 <div class="footer">
-  <span>MBC2 Dashboard v0.4.2 — mic-LABO Motor Boot Camp 2</span>
+  <span>MBC2 Dashboard v0.3.0 — mic-LABO Motor Boot Camp 2</span>
   <span>Frames: <span class="raw-count" id="rawCount">0</span> &nbsp;|&nbsp; Session: <span class="raw-count" id="sessionCount">0</span> rows</span>
 </div>
 
@@ -1187,22 +1122,6 @@ function updateProgram() {
   const mm = Math.floor(tSecs/60), ss = tSecs % 60;
   document.getElementById('progTime').textContent = mm + ':' + String(ss).padStart(2,'0');
 
-  // Cooldown detection: dir is — (0), rpm is 0, program active, and counter > 50 (5s minimum
-  // to avoid false positive during motor spin-up at the very start of a new step)
-  const isCooling = state.dir === '—' && state.rpm === 0 && state.step > 0
-    && state.counter > 50
-    && state.progName !== 'MANU' && state.progName !== '—';
-  const cooldownRow = document.getElementById('cooldownRow');
-  const timeRow = document.querySelector('[id="progTime"]')?.closest('.prog-detail');
-  if (isCooling) {
-    cooldownRow.style.display = 'flex';
-    document.getElementById('progCooldown').textContent = mm + ':' + String(ss).padStart(2,'0');
-    if (timeRow) timeRow.style.display = 'none';
-  } else {
-    cooldownRow.style.display = 'none';
-    if (timeRow) timeRow.style.display = 'flex';
-  }
-
   for (let i = 1; i <= 5; i++) {
     const el = document.getElementById('step' + i);
     el.className = 'step-box';
@@ -1223,14 +1142,6 @@ function getActiveProgramDisplay() {
   return prog ? prog.mbc2Label : state.progName;
 }
 
-function getTargetRpm() {
-  if (!activeProfileId || !activeProgramId) return 0;
-  const profile = programLibrary.profiles.find(p => p.id === activeProfileId);
-  const prog = profile ? profile.programs.find(p => p.id === activeProgramId) : null;
-  const v = prog ? prog.targetRpm : null;
-  return Number.isFinite(v) && v > 0 ? v : 0;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // CHARTS
 // ═══════════════════════════════════════════════════════════════
@@ -1246,13 +1157,13 @@ function updateCharts() {
     chartData.kv.shift(); chartData.temp.shift(); chartData.labels.shift();
   }
 
-  drawChart('chartRpm',  chartData.rpm,  '#00e5ff', null, true, getTargetRpm());
+  drawChart('chartRpm',  chartData.rpm,  '#00e5ff', null, true);
   drawChart('chartAmps', chartData.amps, '#ff6b00', 5);
   drawChart('chartKv',   chartData.kv,   '#39ff14', null);
   drawChart('chartTemp', chartData.temp, '#ffcc00', 50);
 }
 
-function drawChart(id, data, color, dangerThreshold, filled, targetLine) {
+function drawChart(id, data, color, dangerThreshold, filled) {
   const canvas = document.getElementById(id);
   const ctx = canvas.getContext('2d');
   const W = canvas.offsetWidth;
@@ -1267,7 +1178,7 @@ function drawChart(id, data, color, dangerThreshold, filled, targetLine) {
   }
 
   if (data.length < 2) return;
-  const max = Math.max(...data, (Number.isFinite(targetLine) && targetLine > 0 ? targetLine : 0), 1) * 1.1;
+  const max = Math.max(...data, 1) * 1.1;
   const xStep = W / (MAX_POINTS - 1);
   const toX = i => (MAX_POINTS - data.length + i) * xStep;
   const toY = v => H - (v / max) * (H - 4) - 2;
@@ -1277,17 +1188,6 @@ function drawChart(id, data, color, dangerThreshold, filled, targetLine) {
     ctx.strokeStyle = '#ff2244'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(W,ty); ctx.stroke();
     ctx.setLineDash([]);
-  }
-
-  // Target RPM dashed line — strict guard against null/undefined/NaN/0
-  if (Number.isFinite(targetLine) && targetLine > 0) {
-    const ty = toY(targetLine);
-    ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 1; ctx.setLineDash([6,3]);
-    ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(W,ty); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#ffcc00';
-    ctx.font = '9px ' + "'Share Tech Mono', monospace";
-    ctx.fillText('TARGET ' + targetLine.toLocaleString(), 4, ty - 3);
   }
 
   if (filled) {
@@ -1361,27 +1261,10 @@ function stopRecording() {
 
 function autoSaveSession() {
   const name = document.getElementById('sessionName').value || ('Session_' + new Date().toISOString().slice(0,19).replace(/[T:]/g,'-'));
-  const notes = document.getElementById('sessionNotes').value.trim() || null;
-  const ambientRaw = document.getElementById('ambientTemp').value;
-  let ambientTemp = null;
-  if (ambientRaw !== '') {
-    const parsed = parseFloat(ambientRaw);
-    if (isNaN(parsed)) {
-      document.getElementById('ambientTemp').style.borderColor = 'var(--danger)';
-      showToast('Ambient temp must be a number — cleared', true);
-      document.getElementById('ambientTemp').value = '';
-    } else {
-      ambientTemp = parsed;
-      document.getElementById('ambientTemp').style.borderColor = 'var(--border2)';
-    }
-  }
-  allSessions[name] = { name, captured: new Date().toISOString(), notes, ambientTemp, data: JSON.parse(JSON.stringify(sessionData)) };
+  allSessions[name] = { name, captured: new Date().toISOString(), data: JSON.parse(JSON.stringify(sessionData)) };
   // Save to server if available
   const csv = buildCSV(sessionData);
-  apiPost('/api/sessions', { name, csv, notes, ambient_temp_c: ambientTemp });
-  // Clear name and notes for next session — ambient temp retained (stays valid across motors at same bench)
-  document.getElementById('sessionName').value = '';
-  document.getElementById('sessionNotes').value = '';
+  apiPost('/api/sessions', { name, csv });
   renderSessionList();
 }
 
@@ -1397,7 +1280,7 @@ function saveSessionCSV() {
   const blob = new Blob([buildCSV(sessionData)], { type:'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = name.replace(/[^a-z0-9_.\-]/gi,'_') + '.csv'; a.click();
+  a.href = url; a.download = name.replace(/[^a-z0-9_-]/gi,'_') + '.csv'; a.click();
   URL.revokeObjectURL(url);
   showToast('Saved: ' + a.download);
 }
@@ -1435,7 +1318,7 @@ function loadSessionIntoView(name) {
     if (chartData.rpm.length > MAX_POINTS) { chartData.rpm.shift(); chartData.amps.shift(); chartData.kv.shift(); chartData.temp.shift(); chartData.labels.shift(); }
     addLogRow(row, row.step !== prevStep); prevStep = row.step;
   });
-  drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true,getTargetRpm());
+  drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true);
   drawChart('chartAmps',chartData.amps,'#ff6b00',5);
   drawChart('chartKv',chartData.kv,'#39ff14',null);
   drawChart('chartTemp',chartData.temp,'#ffcc00',50);
@@ -1447,22 +1330,11 @@ function renderSessionList() {
   const list = document.getElementById('sessionList');
   const keys = Object.keys(allSessions);
   if (!keys.length) { list.innerHTML = '<span style="color:var(--text3);font-size:11px;">No saved sessions</span>'; return; }
-  list.innerHTML = keys.map(k => {
-    const s = allSessions[k];
-    const meta = [s.notes, s.ambientTemp != null ? s.ambientTemp + '°C' : null].filter(Boolean).join(' · ');
-    const metaTrunc = meta.length > 30 ? meta.slice(0, 28) + '…' : meta;
-    return `
-    <div class="session-chip" data-session-key="${escHtml(k)}" title="${escHtml(meta || k)}" style="overflow:hidden;">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;display:block;">${escHtml(k)}${metaTrunc ? ` <span style="color:var(--text3);font-size:9px;">· ${escHtml(metaTrunc)}</span>` : ''} <span class="chip-del" data-del-key="${escHtml(k)}">✕</span></span>
+  list.innerHTML = keys.map(k => `
+    <div class="session-chip" onclick="loadSessionIntoView('${k}')">
+      ${k} <span class="chip-del" onclick="event.stopPropagation();deleteSession('${k}')">✕</span>
     </div>
-  `}).join('');
-  list.querySelectorAll('.session-chip').forEach(chip => {
-    chip.addEventListener('click', () => loadSessionIntoView(chip.dataset.sessionKey));
-    chip.querySelector('.chip-del')?.addEventListener('click', e => {
-      e.stopPropagation();
-      deleteSession(chip.querySelector('.chip-del').dataset.delKey);
-    });
-  });
+  `).join('');
 }
 
 function deleteSession(name) { delete allSessions[name]; renderSessionList(); }
@@ -1658,6 +1530,14 @@ function editProfile(profileId) {
       </select>
     </div>
     <div class="field-group">
+      <label class="field-label">Class</label>
+      <select class="field-select" id="ep_class">
+        <option ${profile.class==='Box'?'selected':''}>Box</option>
+        <option ${profile.class==='Evo'?'selected':''}>Evo</option>
+        <option ${profile.class==='Pro'?'selected':''}>Pro</option>
+      </select>
+    </div>
+    <div class="field-group">
       <label class="field-label">Notes</label>
       <textarea class="notes-area" id="ep_notes">${escHtml(profile.notes||'')}</textarea>
     </div>
@@ -1675,6 +1555,7 @@ function saveProfileEdit(profileId) {
   profile.name    = document.getElementById('ep_name').value.trim() || 'Profile';
   profile.motor   = document.getElementById('ep_motor').value.trim();
   profile.chassis = document.getElementById('ep_chassis').value;
+  profile.class   = document.getElementById('ep_class').value;
   profile.notes   = document.getElementById('ep_notes').value.trim();
   saveLibrary(); renderDrawer(); buildProgSelector();
   closeEditor(); showToast('Profile saved');
@@ -1714,7 +1595,7 @@ function editProgram(profileId, programId) {
   const stepsHTML = prog.steps.map((s,i) => `
     <tr>
       <td style="color:var(--text3);">${i+1}</td>
-      <td><input type="number" step="0.1" min="0" max="5" value="${s.volts}" id="s${i}_v" style="width:60px;"></td>
+      <td><input type="number" step="0.1" min="0" max="9" value="${s.volts}" id="s${i}_v" style="width:60px;"></td>
       <td>
         <select id="s${i}_d">
           <option ${s.dir==='R' ?'selected':''}>R</option>
@@ -1777,16 +1658,11 @@ function saveProgramEdit(profileId, programId) {
   prog.notes     = document.getElementById('ep2_notes').value.trim();
 
   prog.steps = [];
-  let voltWarning = false;
   for (let i = 0; i < 5; i++) {
     const vEl = document.getElementById('s'+i+'_v');
     if (!vEl) break;
-    let volts = parseFloat(vEl.value);
-    if (isNaN(volts) || volts < 0) volts = 0;
-    if (volts > 5) { volts = 5; vEl.value = 5; voltWarning = true; }
-    if (volts > 4.5) voltWarning = true;
     prog.steps.push({
-      volts,
+      volts: parseFloat(vEl.value) || 0,
       dir:   document.getElementById('s'+i+'_d').value,
       time:  document.getElementById('s'+i+'_t').value.trim(),
       cool:  document.getElementById('s'+i+'_c').value.trim()
@@ -1794,12 +1670,7 @@ function saveProgramEdit(profileId, programId) {
   }
 
   saveLibrary(); renderDrawer(); buildProgSelector();
-  closeEditor();
-  if (voltWarning) {
-    showToast('Program saved — check step voltages, one or more exceed 4.5V', true);
-  } else {
-    showToast('Program saved');
-  }
+  closeEditor(); showToast('Program saved');
 }
 
 function deleteProgram(profileId, programId) {
@@ -1843,7 +1714,7 @@ function showGuide(profileId, programId) {
     </div>
     <div class="guide-step">
       <div class="guide-step-num">Step 3 — Enter Steps</div>
-      <div class="guide-step-text">Enter each step as shown below. <strong style="color:var(--accent2);">R = race direction for all Tamiya Mini 4WD chassis</strong></div>
+      <div class="guide-step-text">Enter each step as shown below. <strong style="color:var(--accent2);">R = race direction for FM-A/Super-FM</strong></div>
     </div>
 
     <div class="mbc2-screen">
@@ -1897,9 +1768,23 @@ function importLibraryFile(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.profiles) throw new Error('Invalid format');
-      programLibrary = data;
+
+      // Merge — append profiles that don't already exist by ID
+      let added = 0, skipped = 0;
+      const existingIds = new Set(programLibrary.profiles.map(p => p.id));
+      for (const profile of data.profiles) {
+        if (existingIds.has(profile.id)) {
+          skipped++;
+        } else {
+          programLibrary.profiles.push(profile);
+          added++;
+        }
+      }
+
       saveLibrary(); renderDrawer(); buildProgSelector();
-      showToast('Library imported — ' + data.profiles.length + ' profiles');
+      let msg = `Imported: ${added} added`;
+      if (skipped > 0) msg += `, ${skipped} skipped (already exist)`;
+      showToast(msg);
     } catch(err) { showToast('Import failed: ' + err.message, true); }
   };
   fr.readAsText(file);
@@ -2011,7 +1896,7 @@ function switchTab(tab) {
   if (tabBtn) tabBtn.classList.add('active');
   // Redraw charts if switching back
   if (tab === 'charts' && chartData.rpm.length) {
-    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
+    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true);
     drawChart('chartAmps', chartData.amps, '#ff6b00', 5);
     drawChart('chartKv', chartData.kv, '#39ff14', null);
     drawChart('chartTemp', chartData.temp, '#ffcc00', 50);
@@ -2040,7 +1925,7 @@ function clearRawConsole() {
 
 function addRawLine(line) {
   if (rawPaused) return;
-  const rawConsoleEl = document.getElementById('rawConsole');
+  const console = document.getElementById('rawConsole');
   const parts = line.split(',');
 
   const div = document.createElement('div');
@@ -2054,18 +1939,18 @@ function addRawLine(line) {
     return `<span class="${cls}">${v.trim()}</span>`;
   }).join('');
   div.innerHTML = cols;
-  rawConsoleEl.appendChild(div);
+  console.appendChild(div);
 
   rawLineCount++;
   document.getElementById('rawLineCount').textContent = rawLineCount + ' lines';
 
   // Trim to MAX_RAW_LINES
-  while (rawConsoleEl.children.length > MAX_RAW_LINES) {
-    rawConsoleEl.removeChild(rawConsoleEl.firstChild);
+  while (console.children.length > MAX_RAW_LINES) {
+    console.removeChild(console.firstChild);
   }
 
   // Auto-scroll unless paused
-  rawConsoleEl.scrollTop = rawConsoleEl.scrollHeight;
+  console.scrollTop = console.scrollHeight;
 }
 
 const MOTOR_API = API + '/api/motors';
@@ -2107,9 +1992,9 @@ const MOTOR_MODELS = [
 ];
 
 const CHASSIS_GROUPS = {
-  Front:   { confirmed: true, items: ['FM-A','Super FM','FM'] },
-  Midship: { confirmed: true, items: ['ME','MA','MS'] },
-  Rear:    { confirmed: true, items: ['VZ','AR','VS','Super TZ-X','Super TZ','Super XX','Super X','Super-II','Super-1','Zero','Type 5','Type 4','Type 3','Type 2','Type 1'] },
+  Front:   { confirmed: true,  items: ['FM-A','Super FM','FM'] },
+  Midship: { confirmed: false, items: ['ME','MA','MS'] },
+  Rear:    { confirmed: false, items: ['VZ','AR','VS','Super TZ-X','Super TZ','Super XX','Super X','Super-II','Super-1','Zero','Type 5','Type 4','Type 3','Type 2','Type 1'] },
 };
 
 // Chassis name → DB id map (matches schema.sql insert order)
@@ -2169,12 +2054,11 @@ async function mrSubmitRegistration() {
   btn.textContent = 'Registering...';
 
   const payload = {
-    model_code:     MR.sel.motor.code,
-    direction:      MR.sel.dir,
-    chassis_ids:    MR.sel.chassis.map(n => CHASSIS_IDS[n]).filter(Boolean),
-    program_ids:    MR.sel.progs.map(p => p.id),
-    pre_treatment:  document.getElementById('mrPreTreatment').value || null,
-    notes:          document.getElementById('mrNotes').value.trim() || null,
+    model_code:  MR.sel.motor.code,
+    direction:   MR.sel.dir,
+    chassis_ids: MR.sel.chassis.map(n => CHASSIS_IDS[n]).filter(Boolean),
+    program_ids: MR.sel.progs.map(p => p.id),
+    notes:       document.getElementById('mrNotes').value.trim() || null,
   };
 
   try {
@@ -2254,10 +2138,7 @@ function mrSelectMotor(id) {
 }
 
 function mrSelectDir(dir) {
-  if (dir === 'R' && MR.sel.motor?.shaft === 'Dual') {
-    showToast('PRO motors use Forward direction only', true);
-    return;
-  }
+  if (dir === 'R' && MR.sel.motor?.shaft === 'Dual') return;
   MR.sel.dir = dir;
   MR.sel.chassis = [];
   document.querySelectorAll('.mr-dir-btn').forEach(el => el.classList.remove('sel'));
@@ -2339,8 +2220,6 @@ function mrResetForm() {
   document.getElementById('mr-btn-R')?.classList.remove('off');
   document.querySelectorAll('.mr-ctag').forEach(el => el.classList.remove('sel'));
   document.querySelectorAll('.mr-ptab').forEach(el => el.classList.remove('sel'));
-  const preTreat = document.getElementById('mrPreTreatment');
-  if (preTreat) preTreat.value = '';
   document.getElementById('mrNotes').value = '';
   mrRenderSubprogs();
   mrRenderSeq();
@@ -2449,7 +2328,7 @@ function initMotorRegistry() {
 
   let chassisHtml = '';
   Object.entries(CHASSIS_GROUPS).forEach(([grp, data]) => {
-    const note = 'R = race direction (confirmed all chassis)';
+    const note = data.confirmed ? 'confirmed' : 'direction TBD';
     chassisHtml += `<div class="mr-cgrp-row">${grp} mount — ${note}</div>`;
     data.items.forEach(name => {
       const slug = name.replace(/[\s-]/g,'_');
@@ -2508,16 +2387,7 @@ function initMotorRegistry() {
       <div style="margin-bottom:1.5rem"></div>
 
       <p class="mr-sec-lbl">5. Pre-treatment <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></p>
-      <select class="mr-notes" id="mrPreTreatment" style="margin-bottom:6px;padding:5px 8px;cursor:pointer;">
-        <option value="">None / dry</option>
-        <option value="Water">Water break-in</option>
-        <option value="IPA">IPA (isopropyl alcohol)</option>
-        <option value="ChemZ No8">ChemZ No8 multilube</option>
-        <option value="Light oil">Light oil (bearing/bushing)</option>
-        <option value="Motor spray">Motor spray / contact cleaner</option>
-        <option value="Other">Other (see notes)</option>
-      </select>
-      <textarea class="mr-notes" id="mrNotes" rows="2" placeholder="Additional notes — batch date, purchase source, condition..."></textarea>
+      <textarea class="mr-notes" id="mrNotes" rows="2" placeholder="e.g. Water treatment, batch purchase date..."></textarea>
 
       <p class="mr-sec-lbl" style="margin-top:1.5rem">Motor identifier</p>
       <div class="mr-preview-box">
@@ -2653,10 +2523,6 @@ function populateProgramDropdownForMotor(motor) {
   });
 
   // Don't reset progName/progMotor here — they are managed by updateActiveProgramDisplay()
-
-  // Re-sync benchmark type row visibility since rebuilding the <select> doesn't fire change
-  const benchRow = document.getElementById('benchmarkType')?.closest('div');
-  if (benchRow) benchRow.style.display = (sel.value === '__baseline__') ? 'flex' : 'none';
 }
 
 // startRecording/stopRecording overrides consolidated below
@@ -2682,24 +2548,14 @@ async function finaliseSession() {
 function resolveSelectedProgramDbId() {
   const selVal = document.getElementById('progSelector').value;
   if (!selVal || selVal === '__baseline__') return null;
-  // format: profileId|programId — programId here is the JSON library id, not the DB id
-  // Match it against MR.profiles using the mbc2_label or name as a bridge
+  // format: profileId|programId — program id here is the JSON library id not DB id
+  // We look it up from MR.profiles which has DB program_ids
   const parts = selVal.split('|');
-  const profileJsonId = parts[0];
   const progJsonId = parts[1];
   if (!MR.profiles || !MR.profiles.length) return null;
-
-  // Find the matching library profile and program by JSON id
-  const libProfile = programLibrary.profiles.find(p => p.id === profileJsonId);
-  const libProg = libProfile ? libProfile.programs.find(p => p.id === progJsonId) : null;
-  if (!libProg) return null;
-
-  // Match against DB profiles by name + mbc2_label
-  for (const dbProfile of MR.profiles) {
-    for (const dbProg of dbProfile.programs) {
-      if (dbProg.mbc2_label === libProg.mbc2Label && dbProg.name === libProg.name) {
-        return dbProg.program_id;
-      }
+  for (const profile of MR.profiles) {
+    for (const prog of profile.programs) {
+      if (prog.program_id) return prog.program_id; // return first match for now
     }
   }
   return null;
@@ -2707,9 +2563,7 @@ function resolveSelectedProgramDbId() {
 
 // Motor detail view in Motors tab
 async function mrShowMotorDetail(motorId) {
-  // Check both caches — registeredMotors (right panel) and MR.motors (motors tab registry)
-  const motor = registeredMotors.find(m => m.motor_id === motorId)
-             || MR.motors.find(m => m.motor_id === motorId);
+  const motor = registeredMotors.find(m => m.motor_id === motorId);
   if (!motor) return;
 
   const detailEl = document.getElementById('mrMotorDetail');
@@ -2730,7 +2584,7 @@ async function mrShowMotorDetail(motorId) {
         <span class="mr-session-type ${s.session_type}">${s.session_type}</span>
         <span style="color:var(--text2);font-family:var(--mono);font-size:11px">${s.program_name || '—'}</span>
         <span class="mr-session-rpm">${s.peak_rpm ? s.peak_rpm.toLocaleString() + ' RPM' : '—'}</span>
-        <button class="mr-compare-btn" id="cmpBtn-${s.session_id}" onclick="mrToggleCompare(${s.session_id}, ${motorId}, this)">Compare</button>
+        <button class="mr-compare-btn" id="cmpBtn-${s.session_id}" onclick="mrToggleCompare(${s.session_id}, this)">Compare</button>
         <span class="mr-session-date">${(s.session_date||'').slice(0,10)}</span>
       </div>`;
     });
@@ -2755,196 +2609,60 @@ function mrCloseDetail() {
   if (el) el.style.display = 'none';
 }
 
-// Compare sessions — side-by-side stats + RPM overlay
+// Compare sessions — overlay on RPM chart
 let compareSessionIds = [];
-let compareMotorIds = [];   // parallel array tracking which motor each session belongs to
-const compareColors = ['#00e5ff','#ff6b00','#39ff14','#ffcc00','#ff2244'];
-// Stable colour assignment keyed by sessionId — colour survives remove/re-add
-const compareColorMap = new Map();
+let compareColors = ['#00e5ff','#ff6b00','#39ff14','#ffcc00','#ff2244'];
 
-function getCompareColor(sessionId) {
-  if (!compareColorMap.has(sessionId)) {
-    // Assign the next unused colour, or cycle if all 5 used
-    const used = new Set(compareColorMap.values());
-    const next = compareColors.find(c => !used.has(c)) || compareColors[compareColorMap.size % compareColors.length];
-    compareColorMap.set(sessionId, next);
-  }
-  return compareColorMap.get(sessionId);
-}
-
-async function mrToggleCompare(sessionId, motorId, btn) {
+async function mrToggleCompare(sessionId, btn) {
   const idx = compareSessionIds.indexOf(sessionId);
   if (idx === -1) {
     if (compareSessionIds.length >= 5) { showToast('Max 5 sessions for comparison', true); return; }
     compareSessionIds.push(sessionId);
-    compareMotorIds.push(motorId);
-    getCompareColor(sessionId); // assign stable colour now
     btn.classList.add('active');
   } else {
     compareSessionIds.splice(idx, 1);
-    compareMotorIds.splice(idx, 1);
-    compareColorMap.delete(sessionId); // release colour slot
     btn.classList.remove('active');
   }
-  await renderComparisonPanel();
+  await renderComparisonChart();
 }
 
-function clearComparison() {
-  compareSessionIds = [];
-  compareMotorIds = [];
-  compareColorMap.clear();
-  document.querySelectorAll('.mr-compare-btn').forEach(b => b.classList.remove('active'));
-  const panel = document.getElementById('comparePanel');
-  if (panel) panel.style.display = 'none';
-  drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
-}
-
-async function renderComparisonPanel() {
+async function renderComparisonChart() {
   if (!compareSessionIds.length) {
-    const panel = document.getElementById('comparePanel');
-    if (panel) panel.style.display = 'none';
-    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
+    // Restore live chart
+    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true);
     return;
   }
 
-  // Fetch all session data in parallel — use push not index assignment to avoid sparse array holes
-  const datasets = await Promise.all(compareSessionIds.map(async (sid, i) => {
-    const motorId = compareMotorIds[i];
-    const motor = registeredMotors.find(m => m.motor_id === motorId) || MR.motors.find(m => m.motor_id === motorId);
-    const data = await apiGet('/api/motors/session/' + sid + '/data').catch(() => null);
-    const rows = data?.rows || [];
-    const rpms = rows.map(r => r.rpm || 0);
-    const amps = rows.map(r => r.current_ma ? r.current_ma / 1000 : 0);
-    const kvs  = rows.map(r => r.kv_efficiency || 0);
-    const temps = rows.filter(r => r.temp_c > -270).map(r => r.temp_c || 0);
-    return {
-      sessionId: sid,
-      color: getCompareColor(sid),  // stable colour keyed to session ID
-      motorId,
-      label: motor ? motor.identifier : 'Session ' + sid,
-      model: motor ? motor.model_name : '—',
-      rpms,
-      peakRpm:  rpms.length ? Math.max(...rpms) : 0,
-      avgRpm:   rpms.length ? Math.round(rpms.reduce((a,b)=>a+b,0)/rpms.length) : 0,
-      peakAmps: amps.length ? parseFloat(Math.max(...amps).toFixed(3)) : 0,
-      avgAmps:  amps.length ? parseFloat((amps.reduce((a,b)=>a+b,0)/amps.length).toFixed(3)) : 0,
-      peakKv:   kvs.length  ? Math.max(...kvs) : 0,
-      avgKv:    kvs.length  ? Math.round(kvs.reduce((a,b)=>a+b,0)/kvs.length) : 0,
-      peakTemp: temps.length ? Math.round(Math.max(...temps)) : null,
-    };
-  }));
-
-  // Filter out any null/undefined entries (failed API calls)
-  const validDatasets = datasets.filter(Boolean);
-
-  // Build or update comparison panel below motor detail
-  let panel = document.getElementById('comparePanel');
-  if (!panel) {
-    panel = document.createElement('div');
-    panel.id = 'comparePanel';
-    panel.style.cssText = 'margin-top:12px;border:1px solid var(--border2);background:var(--bg2);';
-    const root = document.getElementById('motorRegistryRoot');
-    root.parentElement.appendChild(panel);
-  }
-  panel.style.display = 'block';
-
-  if (!validDatasets.length) {
-    showToast('No session data available to compare', true);
-    return;
-  }
-
-  const maxRpm = Math.max(...validDatasets.map(d => d.peakRpm), 1);
-
-  panel.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg3);">
-      <span style="font-family:var(--display);font-weight:900;font-size:14px;letter-spacing:3px;color:var(--accent);">MOTOR COMPARISON</span>
-      <button class="icon-btn danger" onclick="clearComparison()">✕ Clear</button>
-    </div>
-    <div style="overflow-x:auto;padding:12px;">
-      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:420px;">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:4px 8px;color:var(--text3);font-family:var(--display);font-weight:600;font-size:9px;letter-spacing:2px;border-bottom:1px solid var(--border);">METRIC</th>
-            ${validDatasets.map((d,i) => `
-              <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border);border-left:2px solid ${d.color};">
-                <div style="font-family:var(--display);font-weight:900;font-size:13px;color:${d.color};">${d.label}</div>
-                <div style="font-size:9px;color:var(--text3);font-weight:400;">${d.model}</div>
-              </th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${[
-            ['Peak RPM', d => d.peakRpm ? d.peakRpm.toLocaleString() : '—', true],
-            ['Avg RPM',  d => d.avgRpm  ? d.avgRpm.toLocaleString()  : '—', false],
-            ['Peak kV',  d => d.peakKv  ? d.peakKv.toLocaleString()  : '—', true],
-            ['Avg kV',   d => d.avgKv   ? d.avgKv.toLocaleString()   : '—', false],
-            ['Peak Amps',d => d.peakAmps ? d.peakAmps + 'A' : '—', false],
-            ['Avg Amps', d => d.avgAmps  ? d.avgAmps + 'A'  : '—', false],
-            ['Peak Temp',d => d.peakTemp != null ? d.peakTemp + '°C' : '—', false],
-          ].map(([label, val, highlight]) => {
-            const nums = validDatasets.map(d => {
-              const v = val(d);
-              return v === '—' ? -Infinity : parseFloat(v.replace(/[^\d.]/g,''));
-            });
-            const best = Math.max(...nums);
-            return `<tr>
-              <td style="padding:5px 8px;color:var(--text2);font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:1px;">${label}</td>
-              ${validDatasets.map((d,i) => {
-                const v = val(d);
-                const n = parseFloat(v.replace(/[^\d.]/g,''));
-                const isBest = highlight && n === best && n > 0;
-                return `<td style="text-align:right;padding:5px 8px;border-left:1px solid var(--border);font-family:var(--display);font-weight:${isBest?'900':'600'};font-size:${isBest?'14':'11'}px;color:${isBest?d.color:'var(--text2)'};">${v}${isBest?' ★':''}</td>`;
-              }).join('')}
-            </tr>`;
-          }).join('')}
-          <tr>
-            <td style="padding:5px 8px;color:var(--text2);font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:1px;">RPM bar</td>
-            ${validDatasets.map(d => {
-              const pct = maxRpm > 0 ? Math.round((d.peakRpm / maxRpm) * 100) : 0;
-              return `<td style="text-align:right;padding:5px 8px;border-left:1px solid var(--border);">
-                <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
-                  <div style="width:${pct}px;max-width:80px;height:6px;background:${d.color};border-radius:2px;transition:width 0.3s;"></div>
-                  <span style="font-size:9px;color:var(--text3);">${pct}%</span>
-                </div>
-              </td>`;
-            }).join('')}
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="padding:0 12px 8px;font-size:9px;color:var(--text3);">★ Best in comparison &nbsp;·&nbsp; RPM chart overlay shown on Charts tab</div>
-  `;
-
-  // Also draw the RPM chart overlay on the Charts tab
-  renderComparisonChart(validDatasets);
-}
-
-function renderComparisonChart(datasets) {
+  // Switch to Charts tab so user sees it
   switchTab('charts');
+
   const canvas = document.getElementById('chartRpm');
-  if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.width || canvas.offsetWidth;
-  const H = canvas.height || canvas.offsetHeight || 120;
-  canvas.width = W; canvas.height = H;
+  const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
+
+  // Background
   ctx.fillStyle = '#0a0c0f';
   ctx.fillRect(0, 0, W, H);
 
-  // Grid lines
-  ctx.strokeStyle = '#1e2730'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = Math.round(H*i/4)+0.5;
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  let allMax = 0;
+  const sessionDatasets = [];
+
+  for (let i = 0; i < compareSessionIds.length; i++) {
+    const sid = compareSessionIds[i];
+    const data = await apiGet('/api/motors/session/' + sid + '/data');
+    if (!data || !data.rows) continue;
+    const rpms = data.rows.map(r => r.rpm || 0);
+    allMax = Math.max(allMax, ...rpms);
+    sessionDatasets.push({ rpms, color: compareColors[i], sessionId: sid });
   }
 
-  const allRpms = datasets.flatMap(d => d.rpms);
-  const allMax = allRpms.length ? Math.max(...allRpms) * 1.1 : 1;
+  if (!allMax) return;
 
-  datasets.forEach(ds => {
-    if (!ds.rpms.length) return;
+  // Draw each session
+  sessionDatasets.forEach(ds => {
     const toX = i => (i / (ds.rpms.length - 1)) * W;
-    const toY = v => H - (v / allMax) * (H - 4) - 2;
+    const toY = v => H - (v / allMax) * H * 0.9 - H * 0.05;
 
     // Fill
     const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -2959,19 +2677,21 @@ function renderComparisonChart(datasets) {
     ctx.fill();
 
     // Line
-    ctx.strokeStyle = ds.color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+    ctx.strokeStyle = ds.color;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     ds.rpms.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
     ctx.stroke();
   });
 
   // Legend
-  datasets.forEach((ds, i) => {
+  sessionDatasets.forEach((ds, i) => {
     ctx.fillStyle = ds.color;
     ctx.fillRect(10, 10 + i * 18, 12, 3);
     ctx.fillStyle = '#c8d8e8';
     ctx.font = '10px monospace';
-    ctx.fillText(ds.label + ' — peak ' + ds.peakRpm.toLocaleString(), 28, 14 + i * 18);
+    ctx.fillText('Session ' + ds.sessionId, 28, 14 + i * 18);
   });
 }
 
@@ -3019,13 +2739,11 @@ function filterRoster() {
 function sortRoster(col) {
   if (rosterSort.col === col) rosterSort.dir *= -1;
   else { rosterSort.col = col; rosterSort.dir = -1; }
-  // Update header sort indicators
+  // Update header classes
   document.querySelectorAll('.roster-table th').forEach(th => {
-    th.classList.remove('sort-asc', 'sort-desc');
-    if (th.dataset.col === col) {
-      th.classList.add(rosterSort.dir === -1 ? 'sort-desc' : 'sort-asc');
-    }
+    th.classList.remove('sort-asc','sort-desc');
   });
+  const ths = document.querySelectorAll('.roster-table th');
   filterRoster();
 }
 
@@ -3074,29 +2792,9 @@ function renderRoster(motors) {
 
 function setMotorFromRoster(motorId, identifier) {
   activeMotorId = motorId;
-  activeMotorRecord = registeredMotors.find(m => m.motor_id === motorId) || null;
-
-  // Guard — only Active motors can be set as the working motor
-  if (activeMotorRecord && activeMotorRecord.status !== 'Active') {
-    showToast(identifier + ' is ' + activeMotorRecord.status + ' — cannot set as active', true);
-    activeMotorId = null;
-    activeMotorRecord = null;
-    return;
-  }
-
-  // Update the Active Motor dropdown in the right panel
-  const sel = document.getElementById('activeMotorSelect');
-  if (sel) sel.value = motorId;
-
-  // Update sidebar display labels
-  const idEl = document.getElementById('activeMotorId');
-  const nameEl = document.getElementById('activeMotorName');
-  if (activeMotorRecord) {
-    if (idEl) { idEl.textContent = activeMotorRecord.identifier; idEl.style.display = 'block'; }
-    if (nameEl) nameEl.textContent = activeMotorRecord.model_name + ' · ' + (activeMotorRecord.breakin_direction === 'R' ? 'Reverse' : 'Forward');
-    populateProgramDropdownForMotor(activeMotorRecord);
-  }
-
+  // Update active motor display in registry panel
+  const activeEl = document.getElementById('activeMotorDisplay');
+  if (activeEl) activeEl.textContent = identifier;
   showToast('Active motor: ' + identifier);
   switchTab('charts');
 }
@@ -3164,10 +2862,6 @@ async function showMotorDetail(identifier) {
 
     <div style="padding:0 16px 12px;">
       <div class="bench-chart-title">Break-in History</div>
-      ${motorData.notes
-        ? `<div style="font-size:11px;color:var(--text2);padding:4px 0 8px;line-height:1.6;white-space:pre-line;border-bottom:1px solid var(--border);margin-bottom:6px;">${motorData.notes}</div>`
-        : `<div style="font-size:11px;color:var(--text3);padding:2px 0 8px;font-style:italic;">No notes recorded</div>`
-      }
       ${history.length ? `
         <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:6px;">
           <thead>
@@ -3191,14 +2885,8 @@ async function showMotorDetail(identifier) {
     </div>
 
     <div style="padding:0 16px 16px;display:flex;gap:8px;">
-      ${motorData.status === 'Active'
-        ? `<button class="btn primary" onclick="setMotorFromRoster(${motorData.motor_id}, '${identifier}');document.getElementById('motorDetailModal').classList.remove('open')">▶ Set Active</button>`
-        : `<span style="font-family:var(--display);font-size:11px;letter-spacing:1px;color:var(--text3);padding:7px 0;">${motorData.status} — cannot set as active</span>`
-      }
-      ${motorData.status === 'Active'
-        ? `<button class="btn danger" onclick="retireMotor('${identifier}')">Retire Motor</button>`
-        : ''
-      }
+      <button class="btn primary" onclick="setMotorFromRoster(${motorData.motor_id}, '${identifier}');document.getElementById('motorDetailModal').classList.remove('open')">▶ Set Active</button>
+      <button class="btn danger" onclick="retireMotor('${identifier}')">Retire Motor</button>
       <button class="btn" onclick="document.getElementById('motorDetailModal').classList.remove('open')">Close</button>
     </div>
   `;
@@ -3247,7 +2935,6 @@ function startBenchmarkSession() {
   benchmarkMode = true;
 
   document.getElementById('benchmarkBanner').classList.add('active');
-  document.getElementById('bmResultPanel').classList.remove('show');
   document.getElementById('btnRecord').disabled = true;
   document.getElementById('btnStop').disabled = false;
   document.getElementById('runIndicator').style.display = 'inline';
@@ -3317,7 +3004,8 @@ function stopBenchmarkSession() {
         avg_current_ma: avgCurrentMa,
         peak_temp: peakTemp > -270 ? peakTemp : null,
         final_temp: finalTemp > -270 ? finalTemp : null,
-        duration_sec: duration
+        duration_sec: duration,
+        voltage_v: 3.0  // peak voltage step
       }).then(res => {
         if (res?.efficiency?.rating) {
           showToast(`Benchmark saved — ${peakRpm.toLocaleString()} RPM — Rating: ${res.efficiency.rating}`);
@@ -3358,19 +3046,9 @@ function showBenchmarkResult({ peakRpm, avgRpm, peakCurrentMa, avgCurrentMa, pea
     return { v, label: stepLabels[i], kv: avgKv, amps: avgA };
   }).filter(Boolean);
 
-  // Display kV curve in the result panel
-  const panel = document.getElementById('bmResultPanel');
-  document.getElementById('bmResPeakRpm').textContent = peakRpm.toLocaleString();
-  document.getElementById('bmResRpmPerWatt').textContent = rpmPerWatt.toLocaleString();
-  document.getElementById('bmResAmps').textContent = avgAmps.toFixed(3) + 'A';
-  document.getElementById('bmResRating').textContent = rating;
-  const kvTbody = document.querySelector('#bmResKvTable tbody');
-  kvTbody.innerHTML = kvByStep.length
-    ? kvByStep.map(s => `<tr><td>${s.label}</td><td>${s.kv.toLocaleString()}</td><td>${s.amps}A</td></tr>`).join('')
-    : '<tr><td colspan="3" style="color:var(--text3);">No step data</td></tr>';
-  panel.classList.add('show');
-
-  showToast(`Peak: ${peakRpm.toLocaleString()} RPM | Rating: ${rating}`);
+  // Log kV curve to console for now, toast the key result
+  console.table(kvByStep);
+  showToast(`Peak: ${peakRpm.toLocaleString()} RPM | ${avgAmps.toFixed(3)}A @ 3V | ${rpmPerWatt.toLocaleString()} RPM/W | Rating: ${rating}`);
 }
 
 // Benchmark data collection is handled inside parseLine directly
@@ -3385,22 +3063,10 @@ window.addEventListener('load', () => {
   loadFirmwareList();
   initMotorRegistry();
   loadRegisteredMotors();
-
-  // Server health check — show warning banner if server is offline
-  function checkServer() {
-    fetch(API + '/api/ping')
-      .then(r => {
-        if (r.ok) document.getElementById('serverWarn').classList.remove('show');
-        else document.getElementById('serverWarn').classList.add('show');
-      })
-      .catch(() => document.getElementById('serverWarn').classList.add('show'));
-  }
-  checkServer();
-  setInterval(checkServer, 5000);
-
+  setInterval(() => fetch(API + '/api/ping').catch(()=>{}), 5000);
   window.addEventListener('resize', () => {
     if (chartData.rpm.length) {
-      drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true,getTargetRpm());
+      drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true);
       drawChart('chartAmps',chartData.amps,'#ff6b00',5);
       drawChart('chartKv',chartData.kv,'#39ff14',null);
       drawChart('chartTemp',chartData.temp,'#ffcc00',50);
