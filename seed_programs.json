@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "profiles": [
+    {
+      "id": "stock-001",
+      "name": "Stock Motor",
+      "motor": "Kit Standard",
+      "chassis": "FM-A",
+      "notes": "Standard kit motor break-in. FM-A orientation — R = race direction.",
+      "programs": [
+        {
+          "id": "stock-001-a",
+          "name": "STOK-A",
+          "mbc2Label": "STK2",
+          "cycles": 3,
+          "targetRpm": 30000,
+          "notes": "3-cycle brush seating and open. Finishing blast at 4.5V in race direction.",
+          "steps": [
+            { "volts": 1.5, "dir": "R", "time": "3:00", "cool": "0:00" },
+            { "volts": 1.5, "dir": "N", "time": "1:00", "cool": "2:00" },
+            { "volts": 3.0, "dir": "R", "time": "3:00", "cool": "0:00" },
+            { "volts": 3.0, "dir": "N", "time": "1:00", "cool": "2:00" },
+            { "volts": 4.5, "dir": "R", "time": "0:40", "cool": "3:00" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tt2-001",
+      "name": "Tuned Motor",
+      "motor": "Torque-Tuned 2",
+      "chassis": "FM-A",
+      "notes": "3-stage break-in for tuned motors. Check RPM climbing and amps dropping after each stage before proceeding. FM-A — R = race direction.",
+      "programs": [
+        {
+          "id": "tt2-001-a",
+          "name": "TND-A",
+          "mbc2Label": "TT2A",
+          "cycles": 1,
+          "targetRpm": 35000,
+          "notes": "Stage A — Brush seating. Low voltage gentle start. Cool fully before Stage B.",
+          "steps": [
+            { "volts": 1.0, "dir": "R", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.0, "dir": "N", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.5, "dir": "R", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.5, "dir": "N", "time": "5:00", "cool": "2:00" },
+            { "volts": 2.0, "dir": "R", "time": "4:00", "cool": "Full Cool" }
+          ]
+        },
+        {
+          "id": "tt2-001-b",
+          "name": "TND-B",
+          "mbc2Label": "TT2B",
+          "cycles": 1,
+          "targetRpm": 35000,
+          "notes": "Stage B — Open up. Stop if heat climbs too fast. Cool fully before Stage C.",
+          "steps": [
+            { "volts": 2.0, "dir": "N", "time": "4:00", "cool": "2:00" },
+            { "volts": 2.5, "dir": "R", "time": "4:00", "cool": "2:00" },
+            { "volts": 2.5, "dir": "N", "time": "4:00", "cool": "2:00" },
+            { "volts": 3.0, "dir": "R", "time": "3:00", "cool": "3:00" },
+            { "volts": 3.0, "dir": "N", "time": "3:00", "cool": "Full Cool" }
+          ]
+        },
+        {
+          "id": "tt2-001-c",
+          "name": "TND-C",
+          "mbc2Label": "TT2C",
+          "cycles": 1,
+          "targetRpm": 35000,
+          "notes": "Stage C — Polish. Short high-voltage hits. Only continue if RPM still climbing and heat is controlled.",
+          "steps": [
+            { "volts": 3.5, "dir": "R", "time": "2:00", "cool": "2:00" },
+            { "volts": 3.5, "dir": "N", "time": "2:00", "cool": "2:00" },
+            { "volts": 4.0, "dir": "R", "time": "1:30", "cool": "2:00" },
+            { "volts": 4.0, "dir": "N", "time": "1:30", "cool": "2:00" },
+            { "volts": 4.5, "dir": "R", "time": "0:40", "cool": "Full Cool" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dash-001",
+      "name": "Dash Motor",
+      "motor": "Sprint-Dash / Power-Dash / Hyper-Dash 3",
+      "chassis": "FM-A",
+      "notes": "3-stage break-in for Dash series motors. FM-A orientation — R = race direction.",
+      "programs": [
+        {
+          "id": "dash-001-a",
+          "name": "DASH-A",
+          "mbc2Label": "DSHA",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Stage A — Brush seating. Slow controlled start. After: cool fully, light oil on bushings, check smoothness.",
+          "steps": [
+            { "volts": 1.0, "dir": "R", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.0, "dir": "N", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.5, "dir": "R", "time": "5:00", "cool": "2:00" },
+            { "volts": 1.5, "dir": "N", "time": "5:00", "cool": "2:00" },
+            { "volts": 2.0, "dir": "R", "time": "4:00", "cool": "Full Cool" }
+          ]
+        },
+        {
+          "id": "dash-001-b",
+          "name": "DASH-B",
+          "mbc2Label": "DSHB",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Stage B — Open up. Wake motor without overcooking. Stop if heat climbs too fast.",
+          "steps": [
+            { "volts": 2.0, "dir": "N", "time": "4:00", "cool": "2:00" },
+            { "volts": 2.5, "dir": "R", "time": "4:00", "cool": "2:00" },
+            { "volts": 2.5, "dir": "N", "time": "4:00", "cool": "2:00" },
+            { "volts": 3.0, "dir": "R", "time": "3:00", "cool": "3:00" },
+            { "volts": 3.0, "dir": "N", "time": "3:00", "cool": "Full Cool" }
+          ]
+        },
+        {
+          "id": "dash-001-c",
+          "name": "DASH-C",
+          "mbc2Label": "DSHC",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Stage C — Polish. Short high-voltage hits. Only continue if RPM still increasing, heat controlled, motor sounds healthy.",
+          "steps": [
+            { "volts": 3.5, "dir": "R", "time": "2:00", "cool": "2:00" },
+            { "volts": 3.5, "dir": "N", "time": "2:00", "cool": "2:00" },
+            { "volts": 4.0, "dir": "R", "time": "1:30", "cool": "2:00" },
+            { "volts": 4.0, "dir": "N", "time": "1:30", "cool": "2:00" },
+            { "volts": 4.5, "dir": "R", "time": "0:40", "cool": "Full Cool" }
+          ]
+        }
+      ]
+    }
+  ]
+}

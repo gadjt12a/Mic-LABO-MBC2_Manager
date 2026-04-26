@@ -1,0 +1,3412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MBC2 — Motor Boot Camp 2 Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap');
+
+  :root {
+    --bg:        #0a0c0f;
+    --bg2:       #0f1318;
+    --bg3:       #141920;
+    --border:    #1e2730;
+    --border2:   #263040;
+    --accent:    #00e5ff;
+    --accent2:   #ff6b00;
+    --accent3:   #39ff14;
+    --warn:      #ffcc00;
+    --danger:    #ff2244;
+    --text:      #c8d8e8;
+    --text2:     #607080;
+    --text3:     #3a4a5a;
+    --mono:      'Share Tech Mono', monospace;
+    --display:   'Barlow Condensed', sans-serif;
+    --drawer-w:  480px;
+  }
+
+  html, body { height: 100%; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo { display: flex; align-items: baseline; gap: 10px; }
+  .logo-mbc { font-family: var(--display); font-weight: 900; font-size: 28px; letter-spacing: 4px; color: var(--accent); text-transform: uppercase; line-height: 1; }
+  .logo-sub { font-family: var(--display); font-weight: 300; font-size: 13px; letter-spacing: 6px; color: var(--text2); text-transform: uppercase; }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); display: inline-block; margin-right: 6px; }
+  .status-dot.connected { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); animation: pulse 2s infinite; }
+  .status-dot.running   { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: pulse 0.5s infinite; }
+  .status-label { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); }
+
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+
+  .running-indicator { font-family: var(--display); font-weight: 700; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; padding: 3px 10px; animation: blink 1s step-end infinite; }
+
+  /* ── CONTROL BAR ── */
+  .control-bar {
+    display: flex; align-items: center; gap: 8px; padding: 6px 20px;
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+
+  .btn {
+    font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 7px 14px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text);
+    cursor: pointer; transition: all 0.15s; clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.05); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.08); }
+  .btn.primary:hover { background: rgba(0,229,255,0.15); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: rgba(255,34,68,0.1); }
+  .btn.success { border-color: var(--accent3); color: var(--accent3); }
+  .btn.orange { border-color: var(--accent2); color: var(--accent2); }
+  .btn.orange:hover { background: rgba(255,107,0,0.1); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .separator { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  .session-name-input, .baud-select {
+    font-family: var(--mono); font-size: 12px; padding: 6px 12px;
+    background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+    width: 200px; outline: none;
+  }
+  .session-name-input:focus, .baud-select:focus { border-color: var(--accent); }
+  .session-name-input::placeholder { color: var(--text3); }
+
+  /* Active program badge in control bar */
+  .active-prog-badge {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border: 1px solid var(--border2);
+    background: var(--bg3); font-size: 11px; color: var(--text2);
+    font-family: var(--display); font-weight: 600; letter-spacing: 1px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .active-prog-badge:hover { border-color: var(--accent2); color: var(--accent2); }
+  .active-prog-badge .badge-name { color: var(--accent2); font-weight: 700; font-size: 13px; }
+
+  /* ── NO SERIAL WARNING ── */
+  .no-serial { display:none; padding:12px 20px; background:rgba(255,34,68,0.1); border-bottom:1px solid var(--danger); color:var(--danger); font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:1px; }
+
+  /* ── SERVER OFFLINE WARNING ── */
+  .server-warn { display:none; padding:10px 20px; background:rgba(255,107,0,0.08); border-bottom:1px solid var(--accent2); color:var(--accent2); font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:1px; align-items:center; gap:12px; }
+  .server-warn.show { display:flex; }
+  .server-warn a { color:var(--accent2); text-decoration:underline; cursor:pointer; }
+
+  /* ── MAIN DASHBOARD LAYOUT ── */
+  .dashboard { flex:1; display:flex; overflow:hidden; gap:1px; background:var(--border); min-height:0; }
+
+  .charts-col { flex:1; display:flex; flex-direction:column; gap:1px; background:var(--border); min-width:0; overflow:hidden; }
+
+  .prog-col { width:240px; flex-shrink:0; display:flex; flex-direction:column; gap:1px; background:var(--border); overflow-y:auto; }
+
+  /* ── METRICS STRIP ── */
+  .metrics-strip { display:flex; background:var(--border); gap:1px; flex-shrink:0; }
+
+  .metric { flex:1; background:var(--bg2); padding:6px 10px; display:flex; flex-direction:column; gap:1px; position:relative; overflow:hidden; min-width:0; }
+  .metric::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--border2); }
+  .metric.active::before { background:var(--accent); }
+  .metric.warn::before   { background:var(--warn); }
+  .metric.danger::before { background:var(--danger); }
+  .metric.good::before   { background:var(--accent3); }
+  .metric.orange::before { background:var(--accent2); }
+
+  .metric-label { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text2); }
+  .metric-value { font-family:var(--display); font-weight:900; font-size:28px; line-height:1; color:var(--text); transition:color 0.3s; }
+  .metric-value.highlight { color:var(--accent); }
+  .metric-value.warn { color:var(--warn); }
+  .metric-value.danger { color:var(--danger); }
+  .metric-value.good { color:var(--accent3); }
+  .metric-sub { font-size:13px; color:var(--text2); font-family:var(--display); font-weight:600; letter-spacing:1px; margin-top:2px; }
+
+  /* ── CHARTS ── */
+  .chart-wrap { flex:1; background:var(--bg2); padding:6px 10px; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .chart-wrap.tall { flex:2; }
+  .chart-label { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text3); margin-bottom:4px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; }
+  .chart-wrap canvas { flex:1; min-height:0; width:100%; display:block; }
+
+  .small-charts { display:flex; gap:1px; background:var(--border); flex:1; min-height:0; }
+
+  /* ── LOG ── */
+  .log-wrap { flex-shrink:0; height:120px; background:var(--bg2); padding:6px 10px; display:flex; flex-direction:column; overflow:hidden; }
+  .log-scroll { flex:1; overflow-y:auto; min-height:0; }
+
+  .log-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .log-table th { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); padding:4px 6px; text-align:right; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg2); }
+  .log-table th:first-child { text-align:left; }
+  .log-table td { padding:2px 6px; text-align:right; border-bottom:1px solid rgba(30,39,48,0.5); color:var(--text2); font-size:10px; }
+  .log-table td:first-child { text-align:left; color:var(--text3); }
+  .log-table tr:last-child td { color:var(--text); }
+  .log-table tr.step-change td { color:var(--accent2); }
+
+  /* ── PROGRAM PANEL (right col) ── */
+  .prog-section { background:var(--bg2); padding:8px 12px; }
+
+  /* Active program selector */
+  .prog-selector { width:100%; font-family:var(--mono); font-size:11px; padding:4px 6px; background:var(--bg3); border:1px solid var(--border2); color:var(--text); outline:none; cursor:pointer; margin-top:4px; }
+  .prog-selector:focus { border-color:var(--accent2); }
+
+  .prog-name { font-family:var(--display); font-weight:900; font-size:24px; letter-spacing:3px; color:var(--accent); line-height:1; }
+  .prog-motor { font-family:var(--display); font-weight:300; font-size:11px; letter-spacing:2px; color:var(--text2); margin-top:2px; }
+
+  .prog-detail { display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid var(--border); font-size:11px; }
+  .prog-detail:last-child { border-bottom:none; }
+  .prog-detail-label { color:var(--text2); }
+  .prog-detail-value { font-family:var(--display); font-weight:700; font-size:15px; color:var(--text); }
+
+  .step-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-top:6px; }
+  .step-box { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:900; font-size:16px; border:1px solid var(--border2); color:var(--text3); transition:all 0.2s; }
+  .step-box.active { border-color:var(--accent2); color:var(--accent2); background:rgba(255,107,0,0.1); }
+  .step-box.done { border-color:var(--accent3); color:var(--accent3); background:rgba(57,255,20,0.05); }
+
+  .cycle-bar-track { width:100%; height:6px; background:var(--bg3); border:1px solid var(--border2); overflow:hidden; }
+  .cycle-bar-fill { height:100%; background:var(--accent); transition:width 0.5s; box-shadow:0 0 8px var(--accent); }
+
+  /* Sessions list */
+  .session-list { display:flex; flex-wrap:wrap; gap:4px; padding:4px 0; }
+  .session-chip { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:1px; padding:4px 10px; border:1px solid var(--border2); background:var(--bg3); color:var(--text2); cursor:pointer; clip-path:polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%); transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+  .session-chip:hover { border-color:var(--accent); color:var(--accent); }
+  .session-chip .chip-del { color:var(--text3); font-size:12px; }
+  .session-chip:hover .chip-del { color:var(--danger); }
+
+  /* Firmware section */
+  .fw-item { display:flex; align-items:center; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border); font-size:11px; }
+  .fw-item:last-child { border-bottom:none; }
+  .fw-ver { font-family:var(--display); font-weight:700; font-size:13px; color:var(--text); }
+  .fw-ver.latest { color:var(--accent3); }
+  .fw-dl { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:1px; padding:3px 8px; border:1px solid var(--border2); background:var(--bg3); color:var(--text2); cursor:pointer; text-decoration:none; transition:all 0.15s; }
+  .fw-dl:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── DIR BADGE ── */
+  .dir-badge { display:inline-block; font-family:var(--display); font-weight:900; font-size:18px; letter-spacing:2px; padding:2px 8px; border:1px solid var(--border2); }
+  .dir-badge.N  { border-color:var(--accent);  color:var(--accent); }
+  .dir-badge.R  { border-color:var(--accent2); color:var(--accent2); }
+  .dir-badge.NP { border-color:var(--accent);  color:var(--accent); }
+  .dir-badge.RP { border-color:var(--accent2); color:var(--accent2); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); }
+  ::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+  /* ── FOOTER ── */
+  .footer { padding:4px 20px; background:var(--bg2); border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text3); letter-spacing:1px; flex-shrink:0; }
+  .raw-count { font-family:var(--display); font-weight:700; font-size:13px; color:var(--text2); }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; bottom:20px; right:520px; padding:10px 20px; background:var(--bg2); border:1px solid var(--accent); color:var(--accent); font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:2px; text-transform:uppercase; z-index:9998; opacity:0; transform:translateY(10px); transition:all 0.3s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.error { border-color:var(--danger); color:var(--danger); }
+  .toast.drawer-open { right:calc(var(--drawer-w) + 20px); }
+
+  /* ══════════════════════════════════════════
+     PROGRAM LIBRARY DRAWER
+  ══════════════════════════════════════════ */
+  .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+  .drawer-overlay.open { opacity:1; pointer-events:all; }
+
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:var(--drawer-w); background:var(--bg2); border-left:1px solid var(--border2); z-index:201; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow:hidden; }
+  .drawer.open { transform:translateX(0); }
+
+  .drawer-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--bg3); }
+  .drawer-title { font-family:var(--display); font-weight:900; font-size:20px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; }
+  .drawer-close { font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:2px; padding:6px 12px; border:1px solid var(--border2); background:transparent; color:var(--text2); cursor:pointer; transition:all 0.15s; }
+  .drawer-close:hover { border-color:var(--danger); color:var(--danger); }
+
+  .drawer-toolbar { display:flex; gap:6px; padding:8px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+
+  .drawer-body { flex:1; overflow-y:auto; padding:12px 16px; }
+
+  /* Profile cards */
+  .profile-card { border:1px solid var(--border2); background:var(--bg3); margin-bottom:12px; transition:border-color 0.2s; }
+  .profile-card.active-profile { border-color:var(--accent2); }
+
+  .profile-header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; }
+  .profile-header:hover { background:rgba(255,255,255,0.02); }
+
+  .profile-info { flex:1; }
+  .profile-name-display { font-family:var(--display); font-weight:900; font-size:18px; letter-spacing:2px; color:var(--text); }
+  .profile-motor { font-family:var(--display); font-weight:300; font-size:11px; letter-spacing:2px; color:var(--text2); margin-top:1px; }
+  .profile-class-badge { font-family:var(--display); font-weight:700; font-size:10px; letter-spacing:2px; padding:2px 8px; border:1px solid var(--border2); color:var(--text3); }
+  .profile-class-badge.box { border-color:#607080; color:#607080; }
+  .profile-class-badge.evo { border-color:var(--accent2); color:var(--accent2); }
+  .profile-class-badge.pro { border-color:var(--accent); color:var(--accent); }
+
+  .profile-actions { display:flex; gap:4px; }
+  .icon-btn { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:1px; padding:4px 8px; border:1px solid var(--border2); background:transparent; color:var(--text3); cursor:pointer; transition:all 0.15s; }
+  .icon-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .icon-btn.danger:hover { border-color:var(--danger); color:var(--danger); }
+  .icon-btn.select-btn { border-color:var(--accent2); color:var(--accent2); }
+  .icon-btn.select-btn.selected { background:rgba(255,107,0,0.15); }
+
+  /* Program steps within profile */
+  .profile-programs { padding:8px 12px; }
+  .program-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); }
+  .program-row:last-child { border-bottom:none; }
+  .program-row-name { font-family:var(--display); font-weight:700; font-size:14px; letter-spacing:1px; color:var(--text); }
+  .program-row-label { font-size:10px; color:var(--text3); font-family:var(--mono); }
+  .program-row-info { font-size:10px; color:var(--text2); text-align:right; }
+  .program-row-actions { display:flex; gap:4px; }
+
+  /* Step table in program editor */
+  .step-table { width:100%; border-collapse:collapse; margin-top:6px; font-size:11px; }
+  .step-table th { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); padding:4px 6px; text-align:center; border-bottom:1px solid var(--border); }
+  .step-table td { padding:3px 4px; border-bottom:1px solid rgba(30,39,48,0.5); text-align:center; }
+  .step-table input, .step-table select { font-family:var(--mono); font-size:11px; padding:2px 4px; background:var(--bg2); border:1px solid var(--border2); color:var(--text); width:100%; outline:none; text-align:center; }
+  .step-table input:focus, .step-table select:focus { border-color:var(--accent); }
+
+  /* Notes area */
+  .notes-area { font-family:var(--mono); font-size:11px; padding:6px 8px; background:var(--bg2); border:1px solid var(--border2); color:var(--text); width:100%; outline:none; resize:vertical; min-height:50px; margin-top:6px; }
+  .notes-area:focus { border-color:var(--accent); }
+
+  /* Form fields */
+  .field-group { margin-bottom:10px; }
+  .field-label { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin-bottom:4px; display:block; }
+  .field-input { font-family:var(--mono); font-size:12px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border2); color:var(--text); width:100%; outline:none; }
+  .field-input:focus { border-color:var(--accent); }
+  .field-select { font-family:var(--mono); font-size:12px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border2); color:var(--text); width:100%; outline:none; cursor:pointer; }
+  .field-select:focus { border-color:var(--accent); }
+
+  /* MBC2 Guide modal */
+  .guide-modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; display:none; align-items:center; justify-content:center; }
+  .guide-modal.open { display:flex; }
+  .guide-box { background:var(--bg2); border:1px solid var(--border2); width:500px; max-height:80vh; overflow-y:auto; }
+  .guide-box-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--bg3); }
+  .guide-box-title { font-family:var(--display); font-weight:900; font-size:16px; letter-spacing:2px; color:var(--warn); text-transform:uppercase; }
+  .guide-body { padding:16px; }
+
+  /* MBC2 screen mockup */
+  .mbc2-screen { background:#000820; border:2px solid #1a2a3a; padding:10px 12px; font-family:'Share Tech Mono',monospace; font-size:11px; margin-bottom:12px; }
+  .mbc2-screen .s-header { display:flex; justify-content:space-between; color:#607080; font-size:10px; margin-bottom:6px; }
+  .mbc2-screen .s-name { color:#00e5ff; font-size:14px; font-family:'Barlow Condensed',sans-serif; font-weight:900; letter-spacing:3px; }
+  .mbc2-screen .s-meta { color:#607080; font-size:10px; margin-bottom:8px; }
+  .mbc2-screen .s-table { width:100%; border-collapse:collapse; }
+  .mbc2-screen .s-table th { color:#3a4a5a; font-size:9px; padding:2px 6px; text-align:center; border-bottom:1px solid #1a2a3a; }
+  .mbc2-screen .s-table td { color:#c8d8e8; padding:3px 6px; text-align:center; border-bottom:1px solid #0a1520; font-size:11px; }
+  .mbc2-screen .s-table td.v { color:#ffcc00; }
+  .mbc2-screen .s-table td.n { color:#00e5ff; }
+  .mbc2-screen .s-table td.r { color:#ff6b00; }
+
+  .guide-step { border-left:2px solid var(--accent2); padding:6px 10px; margin-bottom:8px; background:rgba(255,107,0,0.05); }
+  .guide-step-num { font-family:var(--display); font-weight:900; font-size:11px; letter-spacing:2px; color:var(--accent2); text-transform:uppercase; }
+  .guide-step-text { font-size:11px; color:var(--text2); margin-top:2px; }
+
+  /* Section divider */
+  .section-label { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--text3); display:flex; align-items:center; gap:8px; margin:10px 0 6px; }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+
+  /* ── RAW DATA TAB ── */
+  .tab-bar { display:flex; gap:1px; background:var(--border); flex-shrink:0; }
+  .tab-btn { font-family:var(--display); font-weight:700; font-size:11px; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; border:none; background:var(--bg3); color:var(--text3); cursor:pointer; transition:all 0.15s; border-bottom:2px solid transparent; }
+  .tab-btn.active { background:var(--bg2); color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-btn:hover:not(.active) { color:var(--text); background:var(--bg2); }
+
+  .tab-panel { display:none; flex:1; flex-direction:column; overflow:hidden; min-height:0; }
+  .tab-panel.active { display:flex; }
+
+  .raw-console { flex:1; overflow-y:auto; padding:8px 12px; font-family:var(--mono); font-size:11px; color:var(--accent3); background:var(--bg); line-height:1.6; min-height:0; }
+  .raw-console .raw-line { border-bottom:1px solid rgba(30,39,48,0.3); padding:1px 0; }
+  .raw-console .raw-line:hover { background:rgba(0,229,255,0.03); }
+  .raw-console .raw-col { display:inline-block; min-width:60px; color:var(--text2); }
+  .raw-console .raw-col.highlight { color:var(--accent3); font-weight:bold; }
+  .raw-console .raw-col.amp-col { color:var(--accent2); font-weight:bold; }
+
+  .raw-toolbar { display:flex; align-items:center; gap:8px; padding:4px 12px; background:var(--bg2); border-bottom:1px solid var(--border); flex-shrink:0; font-size:11px; }
+  .raw-pause-btn { font-family:var(--display); font-weight:700; font-size:10px; letter-spacing:2px; padding:3px 10px; border:1px solid var(--border2); background:var(--bg3); color:var(--text2); cursor:pointer; }
+  .raw-pause-btn.paused { border-color:var(--warn); color:var(--warn); }
+  .raw-col-header { display:flex; gap:0; padding:4px 12px; background:var(--bg3); border-bottom:1px solid var(--border); font-size:9px; color:var(--text3); font-family:var(--display); font-weight:600; letter-spacing:1px; flex-shrink:0; }
+  .raw-col-header span { min-width:60px; }
+  .raw-col-header span.amp-col { color:var(--accent2); }
+
+
+/* ── MOTOR REGISTRY ─────────────────────────────────────────── */
+.tab-panel.motors-panel { padding:16px; overflow-y:auto; }
+.tab-panel.motors-panel.active { display:block; }
+.mr-tab-row { display:flex; border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+.mr-tab { font-family:var(--display); font-weight:700; font-size:11px; letter-spacing:2px; text-transform:uppercase; padding:6px 16px; color:var(--text3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; }
+.mr-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.mr-tab:hover:not(.active) { color:var(--text); }
+.mr-sec-lbl { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin:0 0 8px; display:block; }
+.mr-collapse-hdr { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:8px 0; border-bottom:1px solid var(--border); margin-bottom:10px; user-select:none; }
+.mr-cht { font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:1px; color:var(--text); }
+.mr-chc { font-size:11px; color:var(--text3); margin-left:8px; font-weight:400; font-family:var(--mono); }
+.mr-cha { font-size:10px; color:var(--text3); display:inline-block; transition:transform 0.2s; }
+.mr-motor-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:8px; margin-bottom:12px; }
+.mr-mc { background:var(--bg2); border:1px solid var(--border); border-radius:3px; padding:10px 12px; cursor:pointer; transition:border-color 0.15s; }
+.mr-mc:hover { border-color:var(--border2); }
+.mr-mc.sel { border:1px solid var(--accent); background:rgba(0,229,255,0.06); }
+.mr-mcode { font-size:10px; color:var(--text3); font-family:var(--mono); margin:0 0 3px; }
+.mr-mc.sel .mr-mcode { color:var(--accent); }
+.mr-mname { font-size:12px; font-weight:600; font-family:var(--display); color:var(--text); margin:0 0 6px; line-height:1.3; }
+.mr-mc.sel .mr-mname { color:var(--accent); }
+.mr-srow { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.mr-slbl { font-size:10px; color:var(--text3); width:34px; flex-shrink:0; }
+.mr-sbars { display:flex; gap:2px; flex:1; }
+.mr-sbar { height:3px; border-radius:2px; background:var(--border2); flex:1; }
+.mr-sbar.on { background:var(--text2); }
+.mr-mc.sel .mr-sbar.on { background:var(--accent); }
+.mr-dir-row { display:flex; gap:8px; margin-bottom:1.5rem; }
+.mr-dir-btn { flex:1; padding:10px 8px; border:1px solid var(--border); border-radius:3px; background:var(--bg2); cursor:pointer; font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:1px; color:var(--text3); transition:all 0.15s; text-align:center; }
+.mr-dir-btn:hover { border-color:var(--border2); color:var(--text); }
+.mr-dir-btn.sel { border-color:var(--accent); background:rgba(0,229,255,0.06); color:var(--accent); }
+.mr-dir-btn.off { opacity:0.25; pointer-events:none; }
+.mr-dir-icon { font-size:18px; display:block; margin-bottom:3px; }
+.mr-chassis-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(88px,1fr)); gap:6px; margin-bottom:6px; }
+.mr-cgrp-row { grid-column:1/-1; font-family:var(--display); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text3); margin:10px 0 4px; }
+.mr-ctag { padding:5px 8px; border:1px solid var(--border); border-radius:3px; font-size:11px; color:var(--text2); cursor:pointer; text-align:center; background:var(--bg2); transition:all 0.15s; }
+.mr-ctag:hover { border-color:var(--border2); }
+.mr-ctag.sel { border-color:var(--accent3); background:rgba(57,255,20,0.06); color:var(--accent3); font-weight:600; }
+.mr-ctag.na { opacity:0.15; pointer-events:none; }
+.mr-profile-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.mr-ptab { padding:4px 12px; border:1px solid var(--border); border-radius:2px; font-family:var(--mono); font-size:11px; color:var(--text2); cursor:pointer; background:var(--bg2); transition:all 0.15s; white-space:nowrap; }
+.mr-ptab:hover { border-color:var(--border2); color:var(--text); }
+.mr-ptab.sel { border-color:var(--warn); background:rgba(255,204,0,0.06); color:var(--warn); }
+.mr-ptab.none { opacity:0.4; font-style:italic; }
+.mr-subprog-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-bottom:12px; min-height:60px; }
+.mr-spcard { background:var(--bg2); border:1px solid var(--border); border-radius:3px; padding:10px 12px; cursor:pointer; transition:all 0.15s; position:relative; }
+.mr-spcard:hover { border-color:var(--border2); }
+.mr-spcard.sel { border-color:var(--warn); background:rgba(255,204,0,0.06); }
+.mr-sp-name { font-size:12px; font-weight:700; font-family:var(--mono); color:var(--text); margin:0 0 2px; }
+.mr-spcard.sel .mr-sp-name { color:var(--warn); }
+.mr-sp-label { font-size:10px; color:var(--text3); font-family:var(--mono); margin:0 0 4px; }
+.mr-spcard.sel .mr-sp-label { color:var(--warn); opacity:0.8; }
+.mr-sp-note { font-size:11px; color:var(--text2); line-height:1.4; }
+.mr-spcard.sel .mr-sp-note { color:var(--warn); opacity:0.8; }
+.mr-sp-badge { position:absolute; top:8px; right:8px; width:18px; height:18px; border-radius:50%; background:rgba(255,204,0,0.15); border:1px solid var(--warn); font-size:10px; font-weight:700; color:var(--warn); display:flex; align-items:center; justify-content:center; }
+.mr-seq-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-height:28px; margin-bottom:4px; }
+.mr-seq-chip { display:flex; align-items:center; gap:4px; padding:3px 8px; background:rgba(255,204,0,0.1); border:1px solid var(--warn); border-radius:2px; font-size:11px; font-family:var(--mono); color:var(--warn); }
+.mr-rm { cursor:pointer; font-size:10px; margin-left:2px; opacity:0.7; }
+.mr-rm:hover { opacity:1; }
+.mr-seq-arrow { font-size:11px; color:var(--text3); }
+.mr-seq-empty { font-size:11px; color:var(--text3); }
+.mr-no-profile { font-size:11px; color:var(--text3); padding:12px 0; }
+.mr-notes { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:3px; background:var(--bg2); color:var(--text); font-size:12px; font-family:var(--mono); resize:none; box-sizing:border-box; outline:none; }
+.mr-notes:focus { border-color:var(--accent); }
+.mr-preview-box { background:var(--bg3); border:1px solid var(--border2); border-radius:3px; padding:12px 16px; margin-bottom:1.5rem; display:flex; align-items:center; gap:16px; }
+.mr-prev-id { font-size:22px; font-weight:700; font-family:var(--mono); color:var(--accent); letter-spacing:0.08em; }
+.mr-prev-id.empty { color:var(--text3); font-size:13px; font-weight:400; }
+.mr-prev-meta { font-size:11px; color:var(--text2); line-height:1.8; }
+.mr-reg-btn { width:100%; padding:10px; border:1px solid var(--border); border-radius:3px; background:var(--bg2); color:var(--text3); font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
+.mr-reg-btn.ready { border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,0.06); }
+.mr-reg-btn:disabled { opacity:0.25; cursor:not-allowed; }
+.mr-banner { border-radius:3px; padding:10px 14px; margin-bottom:1rem; font-size:12px; font-family:var(--mono); }
+.mr-banner.success { background:rgba(57,255,20,0.08); border:1px solid var(--accent3); color:var(--accent3); }
+.mr-banner.error { background:rgba(255,34,68,0.08); border:1px solid var(--danger); color:var(--danger); }
+.mr-mrow { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; }
+.mr-mrow:last-child { border-bottom:none; }
+.mr-mrow:hover { background:rgba(255,255,255,0.02); }
+.mr-mrow.active-motor { background:rgba(0,229,255,0.05); }
+.mr-mdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.mr-mdot.active { background:var(--accent3); }
+.mr-mdot.retired { background:var(--text3); }
+.mr-mid { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--accent); min-width:96px; letter-spacing:0.05em; }
+.mr-mmod { font-size:12px; color:var(--text2); flex:1; }
+.mr-msessions { font-size:11px; color:var(--text3); min-width:66px; }
+.mr-mbest { font-size:11px; font-family:var(--mono); color:var(--accent3); min-width:86px; }
+.mr-mdate { font-size:11px; color:var(--text3); }
+.mr-empty { font-size:12px; color:var(--text3); font-family:var(--mono); }
+
+/* ── MOTOR DETAIL PANEL ─────────────────────────────────────── */
+.mr-detail-panel { background:var(--bg3); border:1px solid var(--border2); border-radius:3px; padding:12px; margin-top:8px; }
+.mr-detail-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.mr-detail-id { font-family:var(--mono); font-size:18px; font-weight:700; color:var(--accent); letter-spacing:0.08em; }
+.mr-detail-model { font-size:12px; color:var(--text2); }
+.mr-detail-close { margin-left:auto; background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; }
+.mr-session-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.mr-session-row:last-child { border-bottom:none; }
+.mr-session-type { font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:2px; }
+.mr-session-type.Benchmark { background:rgba(0,229,255,0.1); color:var(--accent); border:1px solid var(--accent); }
+.mr-session-type.Breakin { background:rgba(255,107,0,0.1); color:var(--accent2); border:1px solid var(--accent2); }
+.mr-session-type.Manual { background:rgba(57,255,20,0.1); color:var(--accent3); border:1px solid var(--accent3); }
+.mr-session-rpm { font-family:var(--mono); color:var(--text); min-width:70px; text-align:right; }
+.mr-session-date { color:var(--text3); margin-left:auto; }
+.mr-compare-btn { font-size:10px; padding:2px 8px; border:1px solid var(--border2); border-radius:2px; background:none; color:var(--text2); cursor:pointer; font-family:var(--mono); }
+.mr-compare-btn:hover { border-color:var(--accent); color:var(--accent); }
+.mr-compare-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,0.08); }
+
+/* ── RIGHT PANEL — ACTIVE MOTOR SECTION ─────────────────────── */
+.active-motor-section { margin-bottom:8px; }
+.active-motor-id { font-family:var(--mono); font-size:14px; font-weight:700; color:var(--accent); letter-spacing:0.06em; margin-top:4px; }
+.active-motor-name { font-size:11px; color:var(--text2); margin-top:2px; }
+.motor-select { width:100%; background:var(--bg3); border:1px solid var(--border2); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:2px; outline:none; cursor:pointer; }
+.motor-select:focus { border-color:var(--accent); }
+
+/* ── SESSION LINK STATE ──────────────────────────────────────── */
+.session-motor-link { font-size:10px; color:var(--accent); font-family:var(--mono); margin-top:3px; }
+
+
+  /* ── BENCHMARK MODE ── */
+  .benchmark-banner {
+    display: none;
+    background: rgba(255,204,0,0.12);
+    border: 1px solid var(--warn);
+    padding: 6px 16px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--warn);
+    text-transform: uppercase;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+  }
+  .benchmark-banner.active { display: flex; }
+  .bm-countdown { font-size: 20px; font-weight: 900; color: var(--warn); margin-left: auto; }
+
+  /* ── BENCHMARK RESULT PANEL ── */
+  .bm-result-panel {
+    display: none; flex-shrink: 0;
+    background: rgba(57,255,20,0.05); border-bottom: 1px solid var(--accent3);
+    padding: 8px 16px; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .bm-result-panel.show { display: flex; }
+  .bm-result-close { margin-left:auto; font-family:var(--display); font-weight:700; font-size:10px; letter-spacing:1px; cursor:pointer; color:var(--text3); background:none; border:none; padding:2px 6px; }
+  .bm-result-close:hover { color:var(--danger); }
+  .bm-result-label { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+  .bm-result-val { font-family:var(--display); font-weight:900; font-size:20px; color:var(--accent3); }
+  .bm-result-rating { font-size:28px; }
+  .bm-kv-table { border-collapse:collapse; font-size:11px; }
+  .bm-kv-table th { font-family:var(--display); font-weight:600; font-size:9px; letter-spacing:2px; color:var(--text3); padding:2px 8px; border-bottom:1px solid var(--border); }
+  .bm-kv-table td { padding:2px 8px; color:var(--text2); text-align:right; }
+  .bm-kv-table td:first-child { color:var(--accent2); font-family:var(--display); font-weight:700; text-align:left; }
+
+  /* ── MOTOR ROSTER TABLE ── */
+  .roster-wrap { flex: 1; overflow-y: auto; padding: 12px 16px; min-height: 0; }
+  .roster-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .roster-table th {
+    font-family: var(--display); font-weight: 700; font-size: 10px;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
+    padding: 6px 8px; border-bottom: 1px solid var(--border2);
+    text-align: left; white-space: nowrap; cursor: pointer;
+  }
+  .roster-table th:hover { color: var(--accent); }
+  .roster-table th.sort-asc::after { content: ' ▲'; color: var(--accent); }
+  .roster-table th.sort-desc::after { content: ' ▼'; color: var(--accent); }
+  .roster-table td {
+    padding: 5px 8px; border-bottom: 1px solid var(--border);
+    color: var(--text2); vertical-align: middle;
+  }
+  .roster-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .roster-table tr.retired td { opacity: 0.4; }
+
+  .rating-badge {
+    font-family: var(--display); font-weight: 900; font-size: 14px;
+    padding: 2px 8px; border: 1px solid;
+    display: inline-block; min-width: 28px; text-align: center;
+  }
+  .rating-badge.A { border-color: var(--accent3); color: var(--accent3); background: rgba(57,255,20,0.08); }
+  .rating-badge.B { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.08); }
+  .rating-badge.C { border-color: var(--warn); color: var(--warn); background: rgba(255,204,0,0.08); }
+  .rating-badge.D { border-color: var(--danger); color: var(--danger); background: rgba(255,34,68,0.08); }
+  .rating-badge.NA { border-color: var(--text3); color: var(--text3); }
+
+  .trend-badge { font-size: 14px; }
+  .trend-up { color: var(--accent3); }
+  .trend-flat { color: var(--text3); }
+  .trend-down { color: var(--danger); }
+
+  .rpm-val { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--text); }
+  .eff-val { font-family: var(--display); font-weight: 600; font-size: 12px; color: var(--text2); }
+
+  .roster-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .roster-filter { font-family: var(--mono); font-size: 11px; padding: 4px 8px; background: var(--bg3); border: 1px solid var(--border2); color: var(--text); outline: none; }
+  .roster-filter:focus { border-color: var(--accent); }
+
+  /* ── BENCHMARK HISTORY CHART ── */
+  .bench-chart-wrap { padding: 0 16px 12px; flex-shrink: 0; }
+  .bench-chart-title { font-family: var(--display); font-weight: 600; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+  .bench-sparkline { display: flex; align-items: flex-end; gap: 4px; height: 50px; }
+  .bench-bar { flex: 1; background: var(--accent); opacity: 0.6; min-width: 8px; position: relative; transition: opacity 0.2s; border-radius: 2px 2px 0 0; }
+  .bench-bar:hover { opacity: 1; }
+  .bench-bar-label { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 8px; color: var(--text3); white-space: nowrap; }
+
+  /* ── MOTOR DETAIL MODAL ── */
+  .motor-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 400; display: none; align-items: center; justify-content: center; }
+  .motor-detail-modal.open { display: flex; }
+  .motor-detail-box { background: var(--bg2); border: 1px solid var(--border2); width: 600px; max-height: 80vh; overflow-y: auto; }
+  .motor-detail-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg3); }
+  .motor-detail-title { font-family: var(--display); font-weight: 900; font-size: 18px; letter-spacing: 2px; color: var(--accent); }
+
+  /* ── BENCHMARK PROGRESS ── */
+  .bm-progress-row { display: flex; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .bm-stat { flex: 1; }
+  .bm-stat-label { color: var(--text3); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; font-family: var(--display); }
+  .bm-stat-value { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--text); line-height: 1; margin-top: 2px; }
+  .bm-stat-value.good { color: var(--accent3); }
+  .bm-stat-value.warn { color: var(--warn); }
+
+</style>
+</head>
+<body>
+
+<div class="no-serial" id="noSerialWarning">
+  ⚠ Web Serial API not supported. Use <strong>Chrome</strong> or <strong>Edge</strong> (desktop).
+</div>
+
+<div class="server-warn" id="serverWarn">
+  ⚠ Local server not running — Motor Registry and Program Library will not save.
+  Start <strong>START MBC2 DASHBOARD.bat</strong> (Windows) or <strong>Start MBC2 Dashboard.command</strong> (Mac) to launch the server.
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mbc">MBC2</div>
+    <div class="logo-sub">Motor Boot Camp 2 — Data Logger</div>
+  </div>
+  <div class="header-right">
+    <div id="runIndicator" class="running-indicator" style="display:none;color:var(--accent2);">● RECORDING</div>
+    <button class="btn orange" onclick="openDrawer()" title="Open Program Library">☰ Programs</button>
+    <div>
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-label" id="statusLabel">Disconnected</span>
+    </div>
+  </div>
+</header>
+
+<!-- CONTROL BAR -->
+<div class="control-bar">
+  <button class="btn primary" id="btnConnect" onclick="connectSerial()">Connect MBC2</button>
+  <button class="btn danger" id="btnDisconnect" onclick="disconnectSerial()" disabled>Disconnect</button>
+  <div class="separator"></div>
+  <input class="session-name-input" id="sessionName" type="text" placeholder="Session name (e.g. TT2-A #1)" maxlength="60">
+  <button class="btn success" id="btnRecord" onclick="startRecording()" disabled>● Start Session</button>
+  <button class="btn" id="btnStop" onclick="stopRecording()" disabled>■ Stop Session</button>
+  <div class="separator"></div>
+  <button class="btn" onclick="saveSessionCSV()" id="btnSave" disabled>⬇ Save CSV</button>
+  <button class="btn" onclick="loadFile()">⬆ Load CSV</button>
+  <button class="btn" onclick="clearDisplay()">✕ Clear</button>
+  <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="loadSessionFile(event)">
+  <div class="separator"></div>
+  <!-- Active program indicator -->
+  <div class="active-prog-badge" onclick="openDrawer()" id="activeProgramBadge" title="Click to change active program">
+    <span style="color:var(--text3);font-size:10px;">PROGRAM:</span>
+    <span class="badge-name" id="activeProgramName">None selected</span>
+  </div>
+</div>
+
+<!-- BENCHMARK BANNER -->
+<div class="benchmark-banner" id="benchmarkBanner">
+  ⚡ BENCHMARK MODE — 1.0→3.0V · R Direction · 3 min (5 steps)
+  <span id="bmCountdown" class="bm-countdown">2:00</span>
+</div>
+
+<!-- BENCHMARK RESULT PANEL -->
+<div class="bm-result-panel" id="bmResultPanel">
+  <div>
+    <div class="bm-result-label">Peak RPM</div>
+    <div class="bm-result-val" id="bmResPeakRpm">—</div>
+  </div>
+  <div>
+    <div class="bm-result-label">Avg RPM/W</div>
+    <div class="bm-result-val" id="bmResRpmPerWatt">—</div>
+  </div>
+  <div>
+    <div class="bm-result-label">Avg Current @ 3V</div>
+    <div class="bm-result-val" id="bmResAmps">—</div>
+  </div>
+  <div>
+    <div class="bm-result-label">Rating</div>
+    <div class="bm-result-val bm-result-rating" id="bmResRating">—</div>
+  </div>
+  <div>
+    <div class="bm-result-label">kV by Voltage Step</div>
+    <table class="bm-kv-table" id="bmResKvTable">
+      <thead><tr><th>Step</th><th>kV</th><th>Amps</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <button class="bm-result-close" onclick="document.getElementById('bmResultPanel').classList.remove('show')">✕ Close</button>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard">
+  <div class="charts-col">
+
+    <!-- METRICS STRIP -->
+    <div class="metrics-strip">
+      <div class="metric active">
+        <div class="metric-label">RPM</div>
+        <div class="metric-value highlight" id="metRpm">—</div>
+        <div class="metric-sub" id="metRpmMax">Max: —</div>
+      </div>
+      <div class="metric orange">
+        <div class="metric-label">Amps</div>
+        <div class="metric-value" id="metAmps">—</div>
+        <div class="metric-sub" id="metAmpsMax">Max: —</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Voltage</div>
+        <div class="metric-value" id="metVolts">—</div>
+        <div class="metric-sub">V</div>
+      </div>
+      <div class="metric good">
+        <div class="metric-label">kV Efficiency</div>
+        <div class="metric-value good" id="metKv">—</div>
+        <div class="metric-sub" id="metKvMax">Max: —</div>
+      </div>
+      <div class="metric warn">
+        <div class="metric-label">Temp</div>
+        <div class="metric-value" id="metTemp">—</div>
+        <div class="metric-sub" id="metTempMax">Peak: —</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Direction</div>
+        <div style="margin-top:2px"><span class="dir-badge N" id="metDir">—</span></div>
+        <div class="metric-sub" id="metDirLabel">—</div>
+      </div>
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('charts')" id="tabCharts">📈 Charts</button>
+      <button class="tab-btn" onclick="switchTab('raw')" id="tabRaw">⚡ Raw Data</button>
+      <button class="tab-btn" onclick="switchTab('motors')" id="tabMotors">⚙ Motors</button>
+    </div>
+
+    <!-- CHARTS TAB -->
+    <div class="tab-panel active" id="panelCharts" style="flex-direction:column;gap:1px;background:var(--border);">
+
+    <!-- RPM CHART -->
+    <div class="chart-wrap tall">
+      <div class="chart-label">RPM — Live Trace</div>
+      <canvas id="chartRpm"></canvas>
+    </div>
+
+    <!-- SMALL CHARTS -->
+    <div class="small-charts">
+      <div class="chart-wrap">
+        <div class="chart-label">Amps — Draw</div>
+        <canvas id="chartAmps"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-label">kV — Efficiency</div>
+        <canvas id="chartKv"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-label">Temperature °C</div>
+        <canvas id="chartTemp"></canvas>
+      </div>
+    </div>
+
+    <!-- DATA LOG -->
+    <div class="log-wrap">
+      <div class="chart-label">Data Log</div>
+      <div class="log-scroll">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Time</th><th>Prog</th><th>Cycle</th><th>Step</th>
+              <th>RPM</th><th>Max RPM</th><th>Volts</th><th>Amps</th>
+              <th>kV</th><th>Temp</th><th>Dir</th>
+            </tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    </div><!-- end panelCharts -->
+
+    <!-- RAW DATA TAB -->
+    <div class="tab-panel" id="panelRaw" style="flex-direction:column;">
+      <div class="raw-toolbar">
+        <button class="raw-pause-btn" id="rawPauseBtn" onclick="toggleRawPause()">⏸ Pause</button>
+        <button class="raw-pause-btn" onclick="clearRawConsole()">✕ Clear</button>
+        <span style="color:var(--text3);">Showing last 200 lines &nbsp;·&nbsp; Highlighted cols: <span style="color:var(--accent3);">RPM[7]</span> &nbsp;<span style="color:var(--accent2);">AMPS[19]</span></span>
+        <span style="margin-left:auto;color:var(--text3);" id="rawLineCount">0 lines</span>
+      </div>
+      <div class="raw-col-header">
+        <span>[0]</span><span>[1]</span><span>[2]</span><span>[3]</span><span>[4]</span>
+        <span>[5]</span><span>[6]</span><span style="color:var(--accent3);">[7]RPM</span><span>[8]maxR</span><span>[9]</span>
+        <span>[10]</span><span>[11]duty</span><span>[12]dir</span><span>[13]</span><span>[14]ctr</span>
+        <span>[15]tgt</span><span>[16]</span><span>[17]</span><span>[18]temp</span><span class="amp-col">[19]AMPS</span>
+      </div>
+      <div class="raw-console" id="rawConsole"></div>
+    </div><!-- end panelRaw -->
+
+    <!-- MOTORS TAB -->
+    <div class="tab-panel motors-panel" id="panelMotors">
+      <div id="motorRegistryRoot"></div>
+      <div id="mrMotorDetail" style="margin-top:12px;display:none;"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Program Panel -->
+  <div class="prog-col">
+    <div class="prog-section active-motor-section">
+      <div class="chart-label">Active Motor</div>
+      <select class="motor-select" id="activeMotorSelect" onchange="onActiveMotorChange()">
+        <option value="">— Select Motor —</option>
+      </select>
+      <div class="active-motor-id" id="activeMotorId" style="display:none"></div>
+      <div class="active-motor-name" id="activeMotorName"></div>
+    </div>
+    <div class="prog-section">
+      <div class="chart-label">Break-in Program</div>
+      <select class="prog-selector" id="progSelector" onchange="onProgSelectorChange()">
+        <option value="">— Select Program —</option>
+      </select>
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        <select class="prog-selector" id="benchmarkType" style="flex:1;font-size:10px;padding:3px 6px;">
+          <option value="Periodic">Benchmark: Periodic</option>
+          <option value="Pre">Benchmark: Pre break-in</option>
+          <option value="Post">Benchmark: Post break-in</option>
+        </select>
+      </div>
+      <div class="prog-name" id="progName" style="margin-top:6px;">—</div>
+      <div class="prog-motor" id="progMotor">—</div>
+    </div>
+    <div class="prog-section">
+      <div class="prog-detail"><span class="prog-detail-label">CYCLE</span><span class="prog-detail-value" id="progCycle">— / —</span></div>
+      <div class="prog-detail"><span class="prog-detail-label">STEP</span><span class="prog-detail-value" id="progStep">—</span></div>
+      <div class="prog-detail"><span class="prog-detail-label">TARGET</span><span class="prog-detail-value" id="progTarget">—</span></div>
+      <div class="prog-detail"><span class="prog-detail-label">TIME LEFT</span><span class="prog-detail-value" id="progTime">—</span></div>
+      <div class="prog-detail" id="cooldownRow" style="display:none;">
+        <span class="prog-detail-label" style="color:var(--accent);">COOLING</span>
+        <span class="prog-detail-value" id="progCooldown" style="color:var(--accent);font-size:20px;">—</span>
+      </div>
+    </div>
+    <div class="prog-section">
+      <div class="chart-label">Steps</div>
+      <div class="step-grid">
+        <div class="step-box" id="step1">1</div>
+        <div class="step-box" id="step2">2</div>
+        <div class="step-box" id="step3">3</div>
+        <div class="step-box" id="step4">4</div>
+        <div class="step-box" id="step5">5</div>
+      </div>
+    </div>
+    <div class="prog-section">
+      <div class="chart-label">Cycle Progress</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin:4px 0 4px;">
+        <span id="cycleLabel">0 / 0</span><span id="cyclePct">0%</span>
+      </div>
+      <div class="cycle-bar-track"><div class="cycle-bar-fill" id="cycleBar" style="width:0%"></div></div>
+    </div>
+    <div class="prog-section" style="flex:1;overflow-y:auto;">
+      <div class="chart-label">Sessions</div>
+      <div style="margin-bottom:6px;">
+        <input type="text" id="sessionNotes" placeholder="Notes (lube, conditions...)" style="width:100%;font-family:var(--mono);font-size:10px;padding:4px 6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;margin-bottom:4px;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input type="number" id="ambientTemp" placeholder="Ambient °C" min="-20" max="60" step="0.5" style="width:100%;font-family:var(--mono);font-size:10px;padding:4px 6px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
+        </div>
+      </div>
+      <div class="session-list" id="sessionList">
+        <span style="color:var(--text3);font-size:11px;">No saved sessions</span>
+      </div>
+    </div>
+    <div class="prog-section">
+      <div class="chart-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Firmware</span>
+        <span id="fwStatus" style="font-size:9px;color:var(--text3);letter-spacing:1px;animation:pulse 2s infinite;">CHECKING...</span>
+      </div>
+      <div id="fwList" style="margin-top:4px;"><span style="color:var(--text3);font-size:11px;">Loading...</span></div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:9px;color:var(--text3);line-height:1.6;">
+        Upload via:<br><span style="color:var(--accent2);">http://[MBC2-IP]/u</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>MBC2 Dashboard v0.4.2 — mic-LABO Motor Boot Camp 2</span>
+  <span>Frames: <span class="raw-count" id="rawCount">0</span> &nbsp;|&nbsp; Session: <span class="raw-count" id="sessionCount">0</span> rows</span>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- PROGRAM LIBRARY DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Program Library</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕ Close</button>
+  </div>
+  <div class="drawer-toolbar">
+    <button class="btn primary" onclick="newProfile()">+ New Profile</button>
+    <button class="btn" onclick="exportLibrary()">⬇ Export JSON</button>
+    <button class="btn" onclick="importLibrary()">⬆ Import JSON</button>
+    <input type="file" id="libFileInput" accept=".json" style="display:none" onchange="importLibraryFile(event)">
+  </div>
+  <div class="drawer-body" id="drawerBody">
+    <div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">Loading program library...</div>
+  </div>
+</div>
+
+<!-- MBC2 ENTRY GUIDE MODAL -->
+<div class="guide-modal" id="guideModal">
+  <div class="guide-box">
+    <div class="guide-box-header">
+      <div class="guide-box-title" id="guideTitle">MBC2 Entry Guide</div>
+      <button class="drawer-close" onclick="closeGuide()">✕ Close</button>
+    </div>
+    <div class="guide-body" id="guideBody"></div>
+  </div>
+</div>
+
+<!-- MOTOR DETAIL MODAL -->
+<div class="motor-detail-modal" id="motorDetailModal">
+  <div class="motor-detail-box">
+    <div class="motor-detail-header">
+      <div class="motor-detail-title" id="motorDetailTitle">Motor Detail</div>
+      <button class="drawer-close" onclick="document.getElementById('motorDetailModal').classList.remove('open')">✕ Close</button>
+    </div>
+    <div id="motorDetailBody" style="padding:16px;"></div>
+  </div>
+</div>
+
+<!-- PROFILE EDITOR MODAL -->
+<div class="guide-modal" id="editorModal">
+  <div class="guide-box" style="width:560px;">
+    <div class="guide-box-header">
+      <div class="guide-box-title" id="editorTitle">Edit Profile</div>
+      <button class="drawer-close" onclick="closeEditor()">✕ Close</button>
+    </div>
+    <div class="guide-body" id="editorBody"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let port = null, reader = null, recording = false;
+let sessionData = [], allSessions = {}, rawCount = 0, sessionStart = 0;
+let activeProfileId = null, activeProgramId = null;
+let programLibrary = { version: '1.0', profiles: [] };
+let logRowCount = 0;
+
+const MAX_POINTS = 300;
+let chartData = { rpm:[], amps:[], kv:[], temp:[], labels:[] };
+
+let state = {
+  progNo:0, progName:'—', cycle:0, maxCycle:99, step:0,
+  rpm:0, maxRpm:0, volts:0, amps:0, maxAmps:0, kv:0, maxKv:0,
+  temp:0, maxTemp:0, dir:'—', counter:0, target:0
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SERVER API
+// ═══════════════════════════════════════════════════════════════
+const API = 'http://localhost:8766';
+
+async function apiGet(path) {
+  try { const r = await fetch(API + path); return r.ok ? await r.json() : null; }
+  catch(e) { return null; }
+}
+
+async function apiPost(path, data) {
+  try {
+    const r = await fetch(API + path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+    return r.ok ? await r.json() : null;
+  } catch(e) { return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERIAL
+// ═══════════════════════════════════════════════════════════════
+async function connectSerial() {
+  if (!('serial' in navigator)) {
+    showToast('Web Serial not supported. Use Chrome/Edge.', true);
+    document.getElementById('noSerialWarning').style.display = 'block';
+    return;
+  }
+  try {
+    console.log('[MBC2] Connect attempt started');
+
+    // Clean up any existing port first
+    if (port) {
+      console.log('[MBC2] Cleaning up existing port...');
+      try { if (reader) { await reader.cancel(); reader = null; } } catch(e) { console.log('[MBC2] reader cancel:', e.message); }
+      try { await port.close(); } catch(e) { console.log('[MBC2] port close:', e.message); }
+      port = null;
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    console.log('[MBC2] Requesting port...');
+    port = await navigator.serial.requestPort();
+    console.log('[MBC2] Port selected:', port);
+    console.log('[MBC2] Port readable:', port.readable, 'writable:', port.writable);
+
+    // If port is already open, try to close and reopen
+    if (port.readable || port.writable) {
+      console.log('[MBC2] Port appears open, closing first...');
+      try { await port.close(); } catch(e) { console.log('[MBC2] pre-close error:', e.message); }
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    console.log('[MBC2] Opening port at 115200...');
+    await port.open({ baudRate: 115200 });
+    console.log('[MBC2] Port opened successfully');
+
+    setStatus('connected', 'Connected');
+    document.getElementById('btnConnect').disabled = true;
+    document.getElementById('btnDisconnect').disabled = false;
+    document.getElementById('btnRecord').disabled = false;
+    showToast('MBC2 Connected');
+    startReadLoop();
+  } catch(e) {
+    console.error('[MBC2] Connection error:', e.name, e.message, e);
+    if (e.message && e.message.toLowerCase().includes('already open')) {
+      showToast('Port locked. Click Disconnect then try again.', true);
+      document.getElementById('btnDisconnect').disabled = false;
+    } else if (e.name === 'NotFoundError' || e.message.includes('No port selected')) {
+      // User cancelled picker — not an error
+      console.log('[MBC2] User cancelled port selection');
+    } else {
+      showToast('Connection failed: ' + e.message, true);
+    }
+    port = null;
+  }
+}
+
+async function disconnectSerial() {
+  recording = false;
+  if (reader) { try { await reader.cancel(); } catch(e) {} reader = null; }
+  if (port)   { try { await port.close();   } catch(e) {} port = null; }
+  setStatus('', 'Disconnected');
+  document.getElementById('btnConnect').disabled = false;
+  document.getElementById('btnDisconnect').disabled = true;
+  document.getElementById('btnRecord').disabled = true;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('runIndicator').style.display = 'none';
+  showToast('Disconnected');
+}
+
+async function startReadLoop() {
+  console.log('[MBC2] startReadLoop called');
+  console.log('[MBC2] port.readable:', port.readable);
+
+  // Wait briefly for readable stream to become available
+  let attempts = 0;
+  while (!port.readable && attempts < 10) {
+    await new Promise(r => setTimeout(r, 100));
+    attempts++;
+    console.log('[MBC2] Waiting for readable... attempt', attempts, port.readable);
+  }
+
+  if (!port.readable) {
+    console.error('[MBC2] port.readable still null after waiting — using direct reader');
+    showToast('Stream error — trying alternative read method', true);
+    // Try alternative: read directly without pipeTo
+    try {
+      reader = port.readable.getReader();
+    } catch(e) {
+      console.error('[MBC2] Cannot get reader:', e);
+      showToast('Cannot read port: ' + e.message, true);
+      return;
+    }
+  }
+
+  try {
+    const decoder = new TextDecoderStream();
+    port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+    console.log('[MBC2] Reader created, starting loop');
+    let buffer = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) { console.log('[MBC2] Stream done'); break; }
+      buffer += value;
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed) parseLine(trimmed);
+      }
+    }
+  } catch(e) {
+    console.error('[MBC2] Read loop error:', e.name, e.message);
+    if (port) showToast('Connection lost: ' + e.message, true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PARSE
+// ═══════════════════════════════════════════════════════════════
+function parseLine(line) {
+  if (line.startsWith('Debug:') || line.startsWith('DEBUG:')) return;
+  const parts = line.split(',');
+  if (parts.length < 18) return;
+
+  rawCount++;
+  document.getElementById('rawCount').textContent = rawCount;
+  addRawLine(line);
+  const prevStep = state.step;
+
+  state.progNo   = parseInt(parts[0]) || 0;
+  state.progName = parts[1] ? parts[1].trim() : '—';
+  state.cycle    = parseInt(parts[3]) || 0;
+  state.maxCycle = parseInt(parts[4]) || 99;
+  state.step     = parseInt(parts[5]) || 0;
+  state.rpm      = parseInt(parts[7]) || 0;
+  state.maxRpm   = parseInt(parts[8]) || 0;
+  const rawDuty  = parseInt(parts[11]) || 0;
+  const dirCode  = parseInt(parts[12]) || 0;
+  state.counter  = parseInt(parts[14]) || 0;
+  state.target   = parseInt(parts[15]) || 0;
+  state.temp     = parseInt(parts[18]) || 0;
+  state.amps     = (parseInt(parts[13]) || 0) / 1000; // col[13]/1000 = amps (confirmed)
+
+  const dirMap = { 0:'—', 1:'N', 2:'R', 3:'NP', 4:'RP' };
+  state.dir = dirMap[dirCode] || '—';
+  state.volts = rawDuty > 0 ? parseFloat((rawDuty / 1000).toFixed(2)) : 0;
+  state.kv = state.volts > 0.1 ? Math.round(state.rpm / state.volts) : 0;
+
+  if (state.amps > state.maxAmps) state.maxAmps = state.amps;
+  if (state.kv   > state.maxKv)   state.maxKv   = state.kv;
+  if (state.temp > state.maxTemp && state.temp > -270) state.maxTemp = state.temp;
+
+  updateMetrics(); updateProgram(); updateCharts();
+
+  // Collect benchmark data if benchmark mode is active
+  if (benchmarkMode) {
+    benchmarkData.push({
+      rpm: state.rpm, amps: state.amps,
+      volts: state.volts, temp: state.temp,
+      step: state.step,
+      kv: state.kv,
+      elapsed: Date.now() - benchmarkStart
+    });
+  }
+
+  if (recording) {
+    // Auto-detect program start — ignore MANU rows until a real program begins
+    const isManual = state.progName === 'MANU' || state.progName === '—' || state.volts === 0;
+
+    if (isManual && sessionData.length === 0) {
+      // Still waiting for program to start — show waiting indicator
+      document.getElementById('sessionCount').textContent = 'Waiting...';
+      return;
+    }
+
+    // If we were waiting and program just started, reset session timer
+    if (!isManual && sessionData.length === 0) {
+      sessionStart = Date.now();
+      showToast('Program detected — recording started');
+    }
+
+    const row = {
+      time: new Date().toISOString(), elapsed: Date.now() - sessionStart,
+      progName: state.progName, cycle: state.cycle, step: state.step,
+      rpm: state.rpm, maxRpm: state.maxRpm, volts: state.volts,
+      amps: state.amps, kv: state.kv, temp: state.temp, dir: state.dir
+    };
+    sessionData.push(row);
+    document.getElementById('sessionCount').textContent = sessionData.length;
+    document.getElementById('btnSave').disabled = false;
+    addLogRow(row, prevStep !== state.step);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI UPDATES
+// ═══════════════════════════════════════════════════════════════
+function updateMetrics() {
+  const rpmEl = document.getElementById('metRpm');
+  rpmEl.textContent = state.rpm > 0 ? state.rpm.toLocaleString() : '0';
+  document.getElementById('metRpmMax').textContent = 'Max: ' + state.maxRpm.toLocaleString();
+
+  const ampsEl = document.getElementById('metAmps');
+  ampsEl.textContent = state.amps.toFixed(2);
+  ampsEl.className = 'metric-value' + (state.amps > 3 ? ' danger' : state.amps > 2 ? ' warn' : '');
+  document.getElementById('metAmpsMax').textContent = 'Max: ' + state.maxAmps.toFixed(2) + 'A';
+
+  document.getElementById('metVolts').textContent = state.volts.toFixed(2);
+
+  const kvEl = document.getElementById('metKv');
+  kvEl.textContent = state.kv > 0 ? state.kv.toLocaleString() : '—';
+  document.getElementById('metKvMax').textContent = 'Max: ' + state.maxKv.toLocaleString();
+
+  const tempEl = document.getElementById('metTemp');
+  const tempDisplay = state.temp <= -270 ? '--' : state.temp;
+  const tempMaxDisplay = state.maxTemp <= -270 ? '--' : state.maxTemp + '°C';
+  tempEl.textContent = tempDisplay;
+  tempEl.className = 'metric-value' + (state.temp >= 45 ? ' danger' : state.temp >= 38 ? ' warn' : '');
+  document.getElementById('metTempMax').textContent = 'Peak: ' + tempMaxDisplay;
+
+  const dirEl = document.getElementById('metDir');
+  dirEl.textContent = state.dir || '—';
+  dirEl.className = 'dir-badge ' + (state.dir || 'N');
+  const dirLabels = { 'N':'Normal Fwd','R':'Reverse','NP':'Normal Pulse','RP':'Rev Pulse','—':'—' };
+  document.getElementById('metDirLabel').textContent = dirLabels[state.dir] || '—';
+}
+
+function updateProgram() {
+  // Show MBC2 stream program name if no active program selected
+  const displayName = activeProgramId ? getActiveProgramDisplay() : state.progName;
+  document.getElementById('progCycle').textContent = state.cycle + ' / ' + state.maxCycle;
+  document.getElementById('progStep').textContent = state.step;
+  document.getElementById('progTarget').textContent = state.target > 0 ? state.target.toLocaleString() + ' rpm' : '—';
+
+  const tSecs = Math.floor(state.counter / 100);
+  const mm = Math.floor(tSecs/60), ss = tSecs % 60;
+  document.getElementById('progTime').textContent = mm + ':' + String(ss).padStart(2,'0');
+
+  // Cooldown detection: dir is — (0), rpm is 0, program active, and counter > 50 (5s minimum
+  // to avoid false positive during motor spin-up at the very start of a new step)
+  const isCooling = state.dir === '—' && state.rpm === 0 && state.step > 0
+    && state.counter > 50
+    && state.progName !== 'MANU' && state.progName !== '—';
+  const cooldownRow = document.getElementById('cooldownRow');
+  const timeRow = document.querySelector('[id="progTime"]')?.closest('.prog-detail');
+  if (isCooling) {
+    cooldownRow.style.display = 'flex';
+    document.getElementById('progCooldown').textContent = mm + ':' + String(ss).padStart(2,'0');
+    if (timeRow) timeRow.style.display = 'none';
+  } else {
+    cooldownRow.style.display = 'none';
+    if (timeRow) timeRow.style.display = 'flex';
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'step-box';
+    if (i < state.step) el.classList.add('done');
+    if (i === state.step) el.classList.add('active');
+  }
+
+  const pct = state.maxCycle > 0 ? Math.round((state.cycle/state.maxCycle)*100) : 0;
+  document.getElementById('cycleBar').style.width = pct + '%';
+  document.getElementById('cycleLabel').textContent = state.cycle + ' / ' + state.maxCycle;
+  document.getElementById('cyclePct').textContent = pct + '%';
+}
+
+function getActiveProgramDisplay() {
+  const profile = programLibrary.profiles.find(p => p.id === activeProfileId);
+  if (!profile) return state.progName;
+  const prog = profile.programs.find(p => p.id === activeProgramId);
+  return prog ? prog.mbc2Label : state.progName;
+}
+
+function getTargetRpm() {
+  if (!activeProfileId || !activeProgramId) return 0;
+  const profile = programLibrary.profiles.find(p => p.id === activeProfileId);
+  const prog = profile ? profile.programs.find(p => p.id === activeProgramId) : null;
+  const v = prog ? prog.targetRpm : null;
+  return Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════
+function updateCharts() {
+  chartData.rpm.push(state.rpm);
+  chartData.amps.push(state.amps);
+  chartData.kv.push(state.kv);
+  chartData.temp.push(state.temp <= -270 ? 0 : state.temp);
+  chartData.labels.push(Date.now());
+
+  if (chartData.rpm.length > MAX_POINTS) {
+    chartData.rpm.shift(); chartData.amps.shift();
+    chartData.kv.shift(); chartData.temp.shift(); chartData.labels.shift();
+  }
+
+  drawChart('chartRpm',  chartData.rpm,  '#00e5ff', null, true, getTargetRpm());
+  drawChart('chartAmps', chartData.amps, '#ff6b00', 5);
+  drawChart('chartKv',   chartData.kv,   '#39ff14', null);
+  drawChart('chartTemp', chartData.temp, '#ffcc00', 50);
+}
+
+function drawChart(id, data, color, dangerThreshold, filled, targetLine) {
+  const canvas = document.getElementById(id);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight || canvas.parentElement.clientHeight - 30 || 120;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+
+  ctx.strokeStyle = '#1e2730'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = Math.round(H*i/4)+0.5;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  if (data.length < 2) return;
+  const max = Math.max(...data, (Number.isFinite(targetLine) && targetLine > 0 ? targetLine : 0), 1) * 1.1;
+  const xStep = W / (MAX_POINTS - 1);
+  const toX = i => (MAX_POINTS - data.length + i) * xStep;
+  const toY = v => H - (v / max) * (H - 4) - 2;
+
+  if (dangerThreshold) {
+    const ty = toY(dangerThreshold);
+    ctx.strokeStyle = '#ff2244'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(W,ty); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Target RPM dashed line — strict guard against null/undefined/NaN/0
+  if (Number.isFinite(targetLine) && targetLine > 0) {
+    const ty = toY(targetLine);
+    ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 1; ctx.setLineDash([6,3]);
+    ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(W,ty); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '9px ' + "'Share Tech Mono', monospace";
+    ctx.fillText('TARGET ' + targetLine.toLocaleString(), 4, ty - 3);
+  }
+
+  if (filled) {
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, color+'40'); grad.addColorStop(1, color+'00');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.moveTo(toX(0),H);
+    for (let i=0;i<data.length;i++) ctx.lineTo(toX(i),toY(data[i]));
+    ctx.lineTo(toX(data.length-1),H); ctx.closePath(); ctx.fill();
+  }
+
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i=0;i<data.length;i++) {
+    i===0 ? ctx.moveTo(toX(i),toY(data[i])) : ctx.lineTo(toX(i),toY(data[i]));
+  }
+  ctx.stroke();
+
+  const lx = toX(data.length-1), ly = toY(data[data.length-1]);
+  ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOG TABLE
+// ═══════════════════════════════════════════════════════════════
+function addLogRow(row, stepChange) {
+  const tbody = document.getElementById('logBody');
+  const elapsed = ((row.elapsed||0)/1000).toFixed(1);
+  const tr = document.createElement('tr');
+  if (stepChange) tr.className = 'step-change';
+  tr.innerHTML = `
+    <td>${elapsed}s</td><td>${row.progName}</td><td>${row.cycle}</td><td>${row.step}</td>
+    <td>${row.rpm.toLocaleString()}</td><td>${row.maxRpm.toLocaleString()}</td>
+    <td>${row.volts.toFixed(2)}V</td><td>${row.amps.toFixed(2)}A</td>
+    <td>${row.kv.toLocaleString()}</td>
+    <td>${row.temp <= -270 ? '--' : row.temp + '°C'}</td><td>${row.dir}</td>
+  `;
+  tbody.appendChild(tr);
+  logRowCount++;
+  if (logRowCount > 200) tbody.removeChild(tbody.firstChild);
+  tbody.parentElement.scrollTop = tbody.parentElement.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RECORDING
+// ═══════════════════════════════════════════════════════════════
+function startRecording() {
+  sessionData = []; sessionStart = Date.now(); recording = true;
+  document.getElementById('btnRecord').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('runIndicator').style.display = 'inline';
+  setStatus('running', 'Recording');
+  showToast('Ready — start program on MBC2 to begin recording');
+  document.getElementById('sessionCount').textContent = 'Waiting...';
+}
+
+function stopRecording() {
+  recording = false;
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('runIndicator').style.display = 'none';
+  setStatus('connected', 'Connected');
+  if (sessionData.length > 0) {
+    document.getElementById('btnSave').disabled = false;
+    showToast('Session stopped — ' + sessionData.length + ' rows');
+    autoSaveSession();
+  }
+}
+
+function autoSaveSession() {
+  const name = document.getElementById('sessionName').value || ('Session_' + new Date().toISOString().slice(0,19).replace(/[T:]/g,'-'));
+  const notes = document.getElementById('sessionNotes').value.trim() || null;
+  const ambientRaw = document.getElementById('ambientTemp').value;
+  let ambientTemp = null;
+  if (ambientRaw !== '') {
+    const parsed = parseFloat(ambientRaw);
+    if (isNaN(parsed)) {
+      document.getElementById('ambientTemp').style.borderColor = 'var(--danger)';
+      showToast('Ambient temp must be a number — cleared', true);
+      document.getElementById('ambientTemp').value = '';
+    } else {
+      ambientTemp = parsed;
+      document.getElementById('ambientTemp').style.borderColor = 'var(--border2)';
+    }
+  }
+  allSessions[name] = { name, captured: new Date().toISOString(), notes, ambientTemp, data: JSON.parse(JSON.stringify(sessionData)) };
+  // Save to server if available
+  const csv = buildCSV(sessionData);
+  apiPost('/api/sessions', { name, csv, notes, ambient_temp_c: ambientTemp });
+  // Clear name and notes for next session — ambient temp retained (stays valid across motors at same bench)
+  document.getElementById('sessionName').value = '';
+  document.getElementById('sessionNotes').value = '';
+  renderSessionList();
+}
+
+function buildCSV(data) {
+  const headers = ['time','elapsed_ms','progName','cycle','step','rpm','maxRpm','volts','amps','kv','temp','dir'];
+  const rows = data.map(r => [r.time,r.elapsed,r.progName,r.cycle,r.step,r.rpm,r.maxRpm,r.volts,r.amps,r.kv,r.temp,r.dir].join(','));
+  return [headers.join(','),...rows].join('\n');
+}
+
+function saveSessionCSV() {
+  if (!sessionData.length) { showToast('No data to save', true); return; }
+  const name = document.getElementById('sessionName').value || 'mbc2_session';
+  const blob = new Blob([buildCSV(sessionData)], { type:'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name.replace(/[^a-z0-9_.\-]/gi,'_') + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Saved: ' + a.download);
+}
+
+function loadFile() { document.getElementById('fileInput').click(); }
+
+function loadSessionFile(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = e => {
+    const lines = e.target.result.trim().split('\n');
+    const data = lines.slice(1).map(line => {
+      const p = line.split(',');
+      return { time:p[0],elapsed:parseInt(p[1])||0,progName:p[2],cycle:parseInt(p[3]),step:parseInt(p[4]),rpm:parseInt(p[5]),maxRpm:parseInt(p[6]),volts:parseFloat(p[7]),amps:parseFloat(p[8]),kv:parseInt(p[9]),temp:parseInt(p[10]),dir:p[11] };
+    });
+    const name = file.name.replace('.csv','');
+    allSessions[name] = { name, captured: new Date().toISOString(), data };
+    renderSessionList(); loadSessionIntoView(name);
+    showToast('Loaded: ' + file.name);
+  };
+  fr.readAsText(file);
+  event.target.value = '';
+}
+
+function loadSessionIntoView(name) {
+  const session = allSessions[name]; if (!session) return;
+  sessionData = session.data;
+  chartData = { rpm:[],amps:[],kv:[],temp:[],labels:[] };
+  document.getElementById('logBody').innerHTML = ''; logRowCount = 0;
+  let prevStep = 0;
+  session.data.forEach(row => {
+    chartData.rpm.push(row.rpm); chartData.amps.push(row.amps);
+    chartData.kv.push(row.kv); chartData.temp.push(row.temp <= -270 ? 0 : row.temp);
+    chartData.labels.push(Date.parse(row.time));
+    if (chartData.rpm.length > MAX_POINTS) { chartData.rpm.shift(); chartData.amps.shift(); chartData.kv.shift(); chartData.temp.shift(); chartData.labels.shift(); }
+    addLogRow(row, row.step !== prevStep); prevStep = row.step;
+  });
+  drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true,getTargetRpm());
+  drawChart('chartAmps',chartData.amps,'#ff6b00',5);
+  drawChart('chartKv',chartData.kv,'#39ff14',null);
+  drawChart('chartTemp',chartData.temp,'#ffcc00',50);
+  document.getElementById('sessionCount').textContent = session.data.length;
+  showToast('Viewing: ' + name);
+}
+
+function renderSessionList() {
+  const list = document.getElementById('sessionList');
+  const keys = Object.keys(allSessions);
+  if (!keys.length) { list.innerHTML = '<span style="color:var(--text3);font-size:11px;">No saved sessions</span>'; return; }
+  list.innerHTML = keys.map(k => {
+    const s = allSessions[k];
+    const meta = [s.notes, s.ambientTemp != null ? s.ambientTemp + '°C' : null].filter(Boolean).join(' · ');
+    const metaTrunc = meta.length > 30 ? meta.slice(0, 28) + '…' : meta;
+    return `
+    <div class="session-chip" data-session-key="${escHtml(k)}" title="${escHtml(meta || k)}" style="overflow:hidden;">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;display:block;">${escHtml(k)}${metaTrunc ? ` <span style="color:var(--text3);font-size:9px;">· ${escHtml(metaTrunc)}</span>` : ''} <span class="chip-del" data-del-key="${escHtml(k)}">✕</span></span>
+    </div>
+  `}).join('');
+  list.querySelectorAll('.session-chip').forEach(chip => {
+    chip.addEventListener('click', () => loadSessionIntoView(chip.dataset.sessionKey));
+    chip.querySelector('.chip-del')?.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteSession(chip.querySelector('.chip-del').dataset.delKey);
+    });
+  });
+}
+
+function deleteSession(name) { delete allSessions[name]; renderSessionList(); }
+
+// ═══════════════════════════════════════════════════════════════
+// PROGRAM LIBRARY
+// ═══════════════════════════════════════════════════════════════
+async function loadLibrary() {
+  // Try server first
+  const data = await apiGet('/api/programs');
+  if (data && data.profiles) {
+    programLibrary = data;
+  } else {
+    // Fallback to localStorage
+    const stored = localStorage.getItem('mbc2_programs');
+    if (stored) {
+      try { programLibrary = JSON.parse(stored); } catch(e) {}
+    }
+  }
+  renderDrawer();
+  buildProgSelector();
+  restoreActiveProgram();
+  updateActiveProgramDisplay();
+}
+
+async function saveLibrary() {
+  // Save to server
+  const serverOk = await apiPost('/api/programs', programLibrary);
+  // Always save to localStorage as backup
+  localStorage.setItem('mbc2_programs', JSON.stringify(programLibrary));
+  if (!serverOk) showToast('Saved locally (server unavailable)', false);
+}
+
+function renderDrawer() {
+  const body = document.getElementById('drawerBody');
+  if (!programLibrary.profiles.length) {
+    body.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">No profiles yet.<br>Click + New Profile to get started.</div>';
+    return;
+  }
+
+  body.innerHTML = programLibrary.profiles.map(profile => {
+    const isActive = profile.id === activeProfileId;
+    const classBadge = (profile.class||'').toLowerCase();
+    return `
+      <div class="profile-card ${isActive ? 'active-profile' : ''}" id="card-${profile.id}">
+        <div class="profile-header">
+          <div class="profile-info">
+            <div class="profile-name-display">${escHtml(profile.name)}</div>
+            <div class="profile-motor">${escHtml(profile.motor||'')} &nbsp;·&nbsp; ${escHtml(profile.chassis||'')}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="profile-class-badge ${classBadge}">${escHtml(profile.class||'')}</span>
+            <div class="profile-actions">
+              <button class="icon-btn select-btn ${isActive?'selected':''}" onclick="selectProfile('${profile.id}')" title="Set as active">▶ Select</button>
+              <button class="icon-btn" onclick="editProfile('${profile.id}')" title="Edit">✏</button>
+              <button class="icon-btn danger" onclick="deleteProfile('${profile.id}')" title="Delete">✕</button>
+            </div>
+          </div>
+        </div>
+        <div class="profile-programs">
+          ${profile.programs.map(prog => `
+            <div class="program-row">
+              <div>
+                <div class="program-row-name">${escHtml(prog.name)}</div>
+                <div class="program-row-label">MBC2: ${escHtml(prog.mbc2Label)} &nbsp;·&nbsp; ${prog.cycles} cycle${prog.cycles>1?'s':''} &nbsp;·&nbsp; Target: ${(prog.targetRpm||0).toLocaleString()} rpm</div>
+              </div>
+              <div class="program-row-actions">
+                <button class="icon-btn" onclick="showGuide('${profile.id}','${prog.id}')" title="MBC2 entry guide">📋 Guide</button>
+                <button class="icon-btn" onclick="editProgram('${profile.id}','${prog.id}')" title="Edit program">✏</button>
+                <button class="icon-btn danger" onclick="deleteProgram('${profile.id}','${prog.id}')" title="Delete">✕</button>
+              </div>
+            </div>
+          `).join('')}
+          <div style="margin-top:6px;">
+            <button class="icon-btn" onclick="newProgram('${profile.id}')" style="width:100%;text-align:center;">+ Add Program</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function buildProgSelector() {
+  const sel = document.getElementById('progSelector');
+  sel.innerHTML = '<option value="">— Select Program —</option>';
+  programLibrary.profiles.forEach(profile => {
+    const group = document.createElement('optgroup');
+    group.label = profile.name + ' (' + (profile.motor||'') + ')';
+    profile.programs.forEach(prog => {
+      const opt = document.createElement('option');
+      opt.value = profile.id + '|' + prog.id;
+      opt.textContent = prog.name + ' — ' + prog.mbc2Label;
+      if (profile.id === activeProfileId && prog.id === activeProgramId) opt.selected = true;
+      group.appendChild(opt);
+    });
+    sel.appendChild(group);
+  });
+}
+
+function onProgSelectorChange() {
+  const val = document.getElementById('progSelector').value;
+  if (!val) { activeProfileId = null; activeProgramId = null; updateActiveProgramDisplay(); return; }
+  const [pid, progid] = val.split('|');
+  activeProfileId = pid; activeProgramId = progid;
+  localStorage.setItem('mbc2_active', JSON.stringify({ profileId:pid, programId:progid }));
+  updateActiveProgramDisplay();
+  renderDrawer();
+}
+
+function selectProfile(profileId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  if (!profile || !profile.programs.length) return;
+  activeProfileId = profileId;
+  activeProgramId = profile.programs[0].id;
+  localStorage.setItem('mbc2_active', JSON.stringify({ profileId, programId: activeProgramId }));
+  updateActiveProgramDisplay();
+  buildProgSelector();
+  renderDrawer();
+  showToast('Active: ' + profile.name + ' — ' + profile.programs[0].name);
+}
+
+function updateActiveProgramDisplay() {
+  const badge = document.getElementById('activeProgramName');
+  if (!activeProfileId || !activeProgramId) {
+    badge.textContent = 'None selected';
+    document.getElementById('progName').textContent = '—';
+    document.getElementById('progMotor').textContent = '—';
+    return;
+  }
+  const profile = programLibrary.profiles.find(p => p.id === activeProfileId);
+  const prog = profile ? profile.programs.find(p => p.id === activeProgramId) : null;
+  if (profile && prog) {
+    badge.textContent = profile.name + ' / ' + prog.name;
+    document.getElementById('progName').textContent = prog.mbc2Label;
+    document.getElementById('progMotor').textContent = profile.motor + ' · ' + profile.chassis;
+    document.getElementById('progTarget').textContent = (prog.targetRpm||0).toLocaleString() + ' rpm';
+  }
+}
+
+function restoreActiveProgram() {
+  const stored = localStorage.getItem('mbc2_active');
+  if (!stored) return;
+  try {
+    const { profileId, programId } = JSON.parse(stored);
+    const profile = programLibrary.profiles.find(p => p.id === profileId);
+    const prog = profile ? profile.programs.find(p => p.id === programId) : null;
+    if (profile && prog) {
+      activeProfileId = profileId; activeProgramId = programId;
+      updateActiveProgramDisplay();
+      buildProgSelector();
+    }
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROFILE / PROGRAM CRUD
+// ═══════════════════════════════════════════════════════════════
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+
+function newProfile() {
+  const profile = {
+    id: genId(), name: 'New Profile', motor: '', chassis: 'FM-A', class: 'Evo', notes: '', programs: []
+  };
+  programLibrary.profiles.push(profile);
+  saveLibrary();
+  renderDrawer(); buildProgSelector();
+  editProfile(profile.id);
+}
+
+function editProfile(profileId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  if (!profile) return;
+
+  document.getElementById('editorTitle').textContent = 'Edit Profile — ' + profile.name;
+  document.getElementById('editorBody').innerHTML = `
+    <div class="field-group">
+      <label class="field-label">Profile Name</label>
+      <input class="field-input" id="ep_name" value="${escHtml(profile.name)}" placeholder="e.g. Torque Tuned 2">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Motor</label>
+      <input class="field-input" id="ep_motor" value="${escHtml(profile.motor||'')}" placeholder="e.g. Torque Tuned 2">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Chassis</label>
+      <select class="field-select" id="ep_chassis">
+        <option ${profile.chassis==='FM-A'?'selected':''}>FM-A</option>
+        <option ${profile.chassis==='Super-FM'?'selected':''}>Super-FM</option>
+        <option ${profile.chassis==='AR'?'selected':''}>AR</option>
+        <option ${profile.chassis==='MA'?'selected':''}>MA</option>
+        <option ${profile.chassis==='MS'?'selected':''}>MS</option>
+        <option ${profile.chassis==='Other'?'selected':''}>Other</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notes</label>
+      <textarea class="notes-area" id="ep_notes">${escHtml(profile.notes||'')}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn primary" onclick="saveProfileEdit('${profileId}')">Save</button>
+      <button class="btn" onclick="closeEditor()">Cancel</button>
+    </div>
+  `;
+  document.getElementById('editorModal').classList.add('open');
+}
+
+function saveProfileEdit(profileId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  if (!profile) return;
+  profile.name    = document.getElementById('ep_name').value.trim() || 'Profile';
+  profile.motor   = document.getElementById('ep_motor').value.trim();
+  profile.chassis = document.getElementById('ep_chassis').value;
+  profile.notes   = document.getElementById('ep_notes').value.trim();
+  saveLibrary(); renderDrawer(); buildProgSelector();
+  closeEditor(); showToast('Profile saved');
+}
+
+function deleteProfile(profileId) {
+  if (!confirm('Delete this profile and all its programs?')) return;
+  programLibrary.profiles = programLibrary.profiles.filter(p => p.id !== profileId);
+  if (activeProfileId === profileId) { activeProfileId = null; activeProgramId = null; updateActiveProgramDisplay(); }
+  saveLibrary(); renderDrawer(); buildProgSelector();
+  showToast('Profile deleted');
+}
+
+function newProgram(profileId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  if (!profile) return;
+  const prog = {
+    id: genId(), name: 'New Program', mbc2Label: 'PRG1', cycles: 1, targetRpm: 45000, notes: '',
+    steps: [
+      { volts:1.0, dir:'R', time:'5:00', cool:'2:00' },
+      { volts:1.0, dir:'N', time:'5:00', cool:'2:00' },
+      { volts:1.5, dir:'R', time:'5:00', cool:'2:00' },
+      { volts:1.5, dir:'N', time:'5:00', cool:'2:00' },
+      { volts:2.0, dir:'R', time:'4:00', cool:'Full Cool' }
+    ]
+  };
+  profile.programs.push(prog);
+  saveLibrary(); renderDrawer(); buildProgSelector();
+  editProgram(profileId, prog.id);
+}
+
+function editProgram(profileId, programId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  const prog = profile ? profile.programs.find(p => p.id === programId) : null;
+  if (!prog) return;
+
+  const stepsHTML = prog.steps.map((s,i) => `
+    <tr>
+      <td style="color:var(--text3);">${i+1}</td>
+      <td><input type="number" step="0.1" min="0" max="5" value="${s.volts}" id="s${i}_v" style="width:60px;"></td>
+      <td>
+        <select id="s${i}_d">
+          <option ${s.dir==='R' ?'selected':''}>R</option>
+          <option ${s.dir==='N' ?'selected':''}>N</option>
+          <option ${s.dir==='NP'?'selected':''}>NP</option>
+          <option ${s.dir==='RP'?'selected':''}>RP</option>
+        </select>
+      </td>
+      <td><input type="text" value="${s.time}" id="s${i}_t" placeholder="5:00" style="width:60px;"></td>
+      <td><input type="text" value="${s.cool}" id="s${i}_c" placeholder="2:00" style="width:80px;"></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('editorTitle').textContent = 'Edit Program — ' + prog.name;
+  document.getElementById('editorBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div class="field-group">
+        <label class="field-label">Program Name</label>
+        <input class="field-input" id="ep2_name" value="${escHtml(prog.name)}" placeholder="e.g. TT2-A">
+      </div>
+      <div class="field-group">
+        <label class="field-label">MBC2 Label (4 chars)</label>
+        <input class="field-input" id="ep2_label" value="${escHtml(prog.mbc2Label)}" maxlength="4" placeholder="TT2A">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Cycles</label>
+        <input class="field-input" type="number" min="1" max="99" id="ep2_cycles" value="${prog.cycles}">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Target RPM</label>
+        <input class="field-input" type="number" step="1000" id="ep2_target" value="${prog.targetRpm||45000}">
+      </div>
+    </div>
+    <div class="section-label">Steps</div>
+    <table class="step-table">
+      <thead><tr><th>#</th><th>Volts</th><th>Dir</th><th>Time</th><th>Cooldown</th></tr></thead>
+      <tbody id="stepsBody">${stepsHTML}</tbody>
+    </table>
+    <div class="field-group" style="margin-top:10px;">
+      <label class="field-label">Notes</label>
+      <textarea class="notes-area" id="ep2_notes">${escHtml(prog.notes||'')}</textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn primary" onclick="saveProgramEdit('${profileId}','${programId}')">Save</button>
+      <button class="btn" onclick="closeEditor()">Cancel</button>
+    </div>
+  `;
+  document.getElementById('editorModal').classList.add('open');
+}
+
+function saveProgramEdit(profileId, programId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  const prog = profile ? profile.programs.find(p => p.id === programId) : null;
+  if (!prog) return;
+
+  prog.name      = document.getElementById('ep2_name').value.trim() || 'Program';
+  prog.mbc2Label = document.getElementById('ep2_label').value.trim().toUpperCase().slice(0,4) || 'PRG1';
+  prog.cycles    = parseInt(document.getElementById('ep2_cycles').value) || 1;
+  prog.targetRpm = parseInt(document.getElementById('ep2_target').value) || 45000;
+  prog.notes     = document.getElementById('ep2_notes').value.trim();
+
+  prog.steps = [];
+  let voltWarning = false;
+  for (let i = 0; i < 5; i++) {
+    const vEl = document.getElementById('s'+i+'_v');
+    if (!vEl) break;
+    let volts = parseFloat(vEl.value);
+    if (isNaN(volts) || volts < 0) volts = 0;
+    if (volts > 5) { volts = 5; vEl.value = 5; voltWarning = true; }
+    if (volts > 4.5) voltWarning = true;
+    prog.steps.push({
+      volts,
+      dir:   document.getElementById('s'+i+'_d').value,
+      time:  document.getElementById('s'+i+'_t').value.trim(),
+      cool:  document.getElementById('s'+i+'_c').value.trim()
+    });
+  }
+
+  saveLibrary(); renderDrawer(); buildProgSelector();
+  closeEditor();
+  if (voltWarning) {
+    showToast('Program saved — check step voltages, one or more exceed 4.5V', true);
+  } else {
+    showToast('Program saved');
+  }
+}
+
+function deleteProgram(profileId, programId) {
+  if (!confirm('Delete this program?')) return;
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  if (!profile) return;
+  profile.programs = profile.programs.filter(p => p.id !== programId);
+  if (activeProgramId === programId) { activeProgramId = null; updateActiveProgramDisplay(); }
+  saveLibrary(); renderDrawer(); buildProgSelector();
+  showToast('Program deleted');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MBC2 ENTRY GUIDE
+// ═══════════════════════════════════════════════════════════════
+function showGuide(profileId, programId) {
+  const profile = programLibrary.profiles.find(p => p.id === profileId);
+  const prog = profile ? profile.programs.find(p => p.id === programId) : null;
+  if (!prog) return;
+
+  document.getElementById('guideTitle').textContent = 'MBC2 Entry Guide — ' + prog.name;
+
+  const dirColor = d => d==='R'||d==='RP' ? 'r' : 'n';
+
+  const stepsHTML = prog.steps.map((s,i) => `
+    <td class="${dirColor(s.dir)}">${s.volts.toFixed(1)}V</td>
+  `).join('');
+
+  const dirRow = prog.steps.map(s => `<td class="${dirColor(s.dir)}">${s.dir}</td>`).join('');
+  const timeRow = prog.steps.map(s => `<td>${s.time}</td>`).join('');
+  const coolRow = prog.steps.map(s => `<td>${s.cool}</td>`).join('');
+
+  document.getElementById('guideBody').innerHTML = `
+    <div class="guide-step">
+      <div class="guide-step-num">Step 1 — Navigate to Program</div>
+      <div class="guide-step-text">From Menu → Program → Select or create a slot → Enter name: <strong style="color:var(--accent)">${prog.mbc2Label}</strong></div>
+    </div>
+    <div class="guide-step">
+      <div class="guide-step-num">Step 2 — Set Cycle &amp; Target</div>
+      <div class="guide-step-text">Cycle: <strong style="color:var(--warn)">${prog.cycles}</strong> &nbsp;·&nbsp; Target RPM: <strong style="color:var(--warn)">${(prog.targetRpm||0).toLocaleString()}</strong> &nbsp;·&nbsp; rStop: <strong style="color:var(--warn)">none</strong></div>
+    </div>
+    <div class="guide-step">
+      <div class="guide-step-num">Step 3 — Enter Steps</div>
+      <div class="guide-step-text">Enter each step as shown below. <strong style="color:var(--accent2);">R = race direction for all Tamiya Mini 4WD chassis</strong></div>
+    </div>
+
+    <div class="mbc2-screen">
+      <div class="s-header">
+        <span>No. ? <strong style="color:#00e5ff;">${prog.mbc2Label}</strong></span>
+        <span>Target: ${(prog.targetRpm||0).toLocaleString()} rpm</span>
+      </div>
+      <div class="s-meta">Cycle: ${prog.cycles} &nbsp;·&nbsp; rStop: none</div>
+      <table class="s-table">
+        <thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--text3);text-align:left;">Volts</td>${stepsHTML}</tr>
+          <tr><td style="color:var(--text3);text-align:left;">Dir</td>${dirRow}</tr>
+          <tr><td style="color:var(--text3);text-align:left;">Time</td>${timeRow}</tr>
+          <tr><td style="color:var(--text3);text-align:left;">Cool</td>${coolRow}</tr>
+        </tbody>
+      </table>
+    </div>
+
+    ${prog.notes ? `
+    <div class="guide-step" style="border-color:var(--text3);">
+      <div class="guide-step-num" style="color:var(--text3);">Notes</div>
+      <div class="guide-step-text">${escHtml(prog.notes)}</div>
+    </div>` : ''}
+  `;
+
+  document.getElementById('guideModal').classList.add('open');
+}
+
+function closeGuide() { document.getElementById('guideModal').classList.remove('open'); }
+function closeEditor() { document.getElementById('editorModal').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT LIBRARY
+// ═══════════════════════════════════════════════════════════════
+function exportLibrary() {
+  const blob = new Blob([JSON.stringify(programLibrary, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'mbc2_programs.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Library exported');
+}
+
+function importLibrary() { document.getElementById('libFileInput').click(); }
+
+function importLibraryFile(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const fr = new FileReader();
+  fr.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.profiles) throw new Error('Invalid format');
+      programLibrary = data;
+      saveLibrary(); renderDrawer(); buildProgSelector();
+      showToast('Library imported — ' + data.profiles.length + ' profiles');
+    } catch(err) { showToast('Import failed: ' + err.message, true); }
+  };
+  fr.readAsText(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAWER
+// ═══════════════════════════════════════════════════════════════
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FIRMWARE
+// ═══════════════════════════════════════════════════════════════
+const FW_BASE = 'http://esp32.miclabo.xyz/';
+const FW_VERSIONS = [
+  { ver:'v0.103', file:'MBC2V0103.ino.bin', latest:false },
+  { ver:'v0.104', file:'MBC2v0104.ino.bin', latest:false },
+  { ver:'v0.105', file:'MBC2v0105.ino.bin', latest:true  }
+];
+
+async function loadFirmwareList() {
+  const list = document.getElementById('fwList');
+  const status = document.getElementById('fwStatus');
+  try {
+    // Fetch via local server proxy to avoid CORS issues
+    const resp = await fetch(API + '/api/firmware/versions', { signal: AbortSignal.timeout(5000) });
+    if (resp.ok) {
+      const text = await resp.text();
+      const versions = text.trim().split('\n').filter(l=>l.includes(',')).map(l => {
+        const [ver,file] = l.split(',');
+        return { ver:ver.trim(), file:file.trim() };
+      }).filter(v=>v.ver&&v.file);
+      if (versions.length) { versions[versions.length-1].latest=true; renderFirmwareList(versions); status.textContent='ONLINE'; status.style.color='var(--accent3)'; return; }
+    }
+  } catch(e) {}
+  renderFirmwareList(FW_VERSIONS);
+  status.textContent='CACHED'; status.style.color='var(--warn)';
+}
+
+function renderFirmwareList(versions) {
+  document.getElementById('fwList').innerHTML = versions.map(v => `
+    <div class="fw-item">
+      <span class="fw-ver ${v.latest?'latest':''}">${v.ver}${v.latest?' ★':''}</span>
+      <a class="fw-dl" href="${FW_BASE}${v.file}" download="${v.file}" target="_blank">⬇ DL</a>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function clearDisplay() {
+  chartData = { rpm:[],amps:[],kv:[],temp:[],labels:[] };
+  document.getElementById('logBody').innerHTML = ''; logRowCount = 0; rawCount = 0; sessionData = [];
+  state.maxRpm=0; state.maxAmps=0; state.maxKv=0; state.maxTemp=0;
+  document.getElementById('rawCount').textContent = '0';
+  document.getElementById('sessionCount').textContent = '0';
+  ['chartRpm','chartAmps','chartKv','chartTemp'].forEach(id => {
+    const c = document.getElementById(id);
+    c.getContext('2d').clearRect(0,0,c.width,c.height);
+  });
+  showToast('Display cleared');
+}
+
+function setStatus(cls, label) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot' + (cls ? ' ' + cls : '');
+  document.getElementById('statusLabel').textContent = label;
+}
+
+let toastTimeout;
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.className = 'toast', 3000);
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+// ── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  // Clear all panels and tab buttons
+  ['panelCharts','panelRaw','panelMotors'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  ['tabCharts','tabRaw','tabMotors'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  // Activate selected
+  const panel = document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  const tabBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (panel) panel.classList.add('active');
+  if (tabBtn) tabBtn.classList.add('active');
+  // Redraw charts if switching back
+  if (tab === 'charts' && chartData.rpm.length) {
+    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
+    drawChart('chartAmps', chartData.amps, '#ff6b00', 5);
+    drawChart('chartKv', chartData.kv, '#39ff14', null);
+    drawChart('chartTemp', chartData.temp, '#ffcc00', 50);
+  }
+  // Load motors registry when switching to motors tab
+  if (tab === 'motors' && typeof mrLoadMotors === 'function') mrLoadMotors();
+}
+
+// ── RAW CONSOLE ───────────────────────────────────────────────────────────────
+let rawPaused = false;
+let rawLineCount = 0;
+const MAX_RAW_LINES = 200;
+
+function toggleRawPause() {
+  rawPaused = !rawPaused;
+  const btn = document.getElementById('rawPauseBtn');
+  btn.textContent = rawPaused ? '▶ Resume' : '⏸ Pause';
+  btn.classList.toggle('paused', rawPaused);
+}
+
+function clearRawConsole() {
+  document.getElementById('rawConsole').innerHTML = '';
+  rawLineCount = 0;
+  document.getElementById('rawLineCount').textContent = '0 lines';
+}
+
+function addRawLine(line) {
+  if (rawPaused) return;
+  const rawConsoleEl = document.getElementById('rawConsole');
+  const parts = line.split(',');
+
+  const div = document.createElement('div');
+  div.className = 'raw-line';
+
+  // Render each column, highlight col[7]=RPM and col[19]=AMPS
+  const cols = parts.map((v, i) => {
+    let cls = 'raw-col';
+    if (i === 7)  cls += ' highlight';
+    if (i === 19) cls += ' amp-col';
+    return `<span class="${cls}">${v.trim()}</span>`;
+  }).join('');
+  div.innerHTML = cols;
+  rawConsoleEl.appendChild(div);
+
+  rawLineCount++;
+  document.getElementById('rawLineCount').textContent = rawLineCount + ' lines';
+
+  // Trim to MAX_RAW_LINES
+  while (rawConsoleEl.children.length > MAX_RAW_LINES) {
+    rawConsoleEl.removeChild(rawConsoleEl.firstChild);
+  }
+
+  // Auto-scroll unless paused
+  rawConsoleEl.scrollTop = rawConsoleEl.scrollHeight;
+}
+
+const MOTOR_API = API + '/api/motors';
+const PROFILE_API = API + '/api/profiles';
+
+// ── State ────────────────────────────────────────────────────
+const MR = {
+  profiles: [],
+  motors: [],
+  sel: {
+    motor: null,
+    dir: null,
+    chassis: [],
+    profileId: null,
+    progs: [],
+  },
+  counters: {},
+  activeTab: 'register',
+};
+
+// ── Motor models (matches DB) ────────────────────────────────
+const MOTOR_MODELS = [
+  { id:1,  name:'Kit Standard',      code:'KS',    shaft:'Single', speed:1,   torque:1   },
+  { id:3,  name:'Rev-Tuned 2',       code:'RT2',   shaft:'Single', speed:2.5, torque:1   },
+  { id:4,  name:'Atomic-Tuned 2',    code:'AT2',   shaft:'Single', speed:1.5, torque:1.5 },
+  { id:5,  name:'Torque-Tuned 2',    code:'TT2',   shaft:'Single', speed:1,   torque:2.5 },
+  { id:6,  name:'Light-Dash',        code:'LD',    shaft:'Single', speed:2.5, torque:2.5 },
+  { id:7,  name:'Hyper-Dash 3',      code:'HD3',   shaft:'Single', speed:3,   torque:3   },
+  { id:8,  name:'Power-Dash',        code:'PD',    shaft:'Single', speed:3,   torque:3.5 },
+  { id:9,  name:'Sprint-Dash',       code:'SD',    shaft:'Single', speed:4,   torque:2.5 },
+  { id:10, name:'Ultra-Dash',        code:'UD',    shaft:'Single', speed:4,   torque:3.5 },
+  { id:11, name:'Plasma-Dash',       code:'PLD',   shaft:'Single', speed:4,   torque:4   },
+  { id:13, name:'Rev-Tuned 2 PRO',   code:'RT2-P', shaft:'Dual',   speed:2.5, torque:1   },
+  { id:14, name:'Atomic-Tuned 2 PRO',code:'AT2-P', shaft:'Dual',   speed:1.5, torque:1.5 },
+  { id:15, name:'Torque-Tuned 2 PRO',code:'TT2-P', shaft:'Dual',   speed:1,   torque:2.5 },
+  { id:16, name:'Light-Dash PRO',    code:'LD-P',  shaft:'Dual',   speed:2.5, torque:2.5 },
+  { id:17, name:'Hyper-Dash PRO',    code:'HD3-P', shaft:'Dual',   speed:3,   torque:3   },
+  { id:18, name:'Mach-Dash PRO',     code:'MD-P',  shaft:'Dual',   speed:3,   torque:3   },
+];
+
+const CHASSIS_GROUPS = {
+  Front:   { confirmed: true, items: ['FM-A','Super FM','FM'] },
+  Midship: { confirmed: true, items: ['ME','MA','MS'] },
+  Rear:    { confirmed: true, items: ['VZ','AR','VS','Super TZ-X','Super TZ','Super XX','Super X','Super-II','Super-1','Zero','Type 5','Type 4','Type 3','Type 2','Type 1'] },
+};
+
+// Chassis name → DB id map (matches schema.sql insert order)
+const CHASSIS_IDS = {
+  'FM-A':1,'Super FM':2,'FM':3,'ME':4,'MA':5,'MS':6,
+  'VZ':7,'AR':8,'VS':9,'Super TZ-X':10,'Super TZ':11,
+  'Super XX':12,'Super X':13,'Super-II':14,'Super-1':15,
+  'Zero':16,'Type 5':17,'Type 4':18,'Type 3':19,'Type 2':20,'Type 1':21,
+};
+
+// ── API helpers ──────────────────────────────────────────────
+async function mrGet(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+async function mrPost(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
+  return data;
+}
+
+// ── Load data from backend ───────────────────────────────────
+async function mrLoadProfiles() {
+  try {
+    const data = await mrGet(PROFILE_API);
+    MR.profiles = data.profiles || [];
+    mrRenderProfileTabs();
+  } catch (e) {
+    console.warn('[MR] Could not load profiles:', e.message);
+  }
+}
+
+async function mrLoadMotors() {
+  try {
+    const data = await mrGet(MOTOR_API + '/all');
+    MR.motors = data.motors || [];
+    mrRenderRegistry();
+  } catch (e) {
+    console.warn('[MR] Could not load motors:', e.message);
+  }
+}
+
+// ── Registration: submit to backend ─────────────────────────
+async function mrSubmitRegistration() {
+  const btn = document.getElementById('mrRegBtn');
+  const banner = document.getElementById('mrBanner');
+  if (!MR.sel.motor || !MR.sel.dir) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Registering...';
+
+  const payload = {
+    model_code:     MR.sel.motor.code,
+    direction:      MR.sel.dir,
+    chassis_ids:    MR.sel.chassis.map(n => CHASSIS_IDS[n]).filter(Boolean),
+    program_ids:    MR.sel.progs.map(p => p.id),
+    pre_treatment:  document.getElementById('mrPreTreatment').value || null,
+    notes:          document.getElementById('mrNotes').value.trim() || null,
+  };
+
+  try {
+    const data = await mrPost(MOTOR_API + '/register', payload);
+    const id = data.motor.identifier;
+
+    // Success
+    banner.textContent = `Motor ${id} registered. Print your label and stick it on!`;
+    banner.className = 'mr-banner success';
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 5000);
+
+    // Update local counter so preview stays accurate
+    const key = `${MR.sel.motor.code}-${MR.sel.dir}`;
+    MR.counters[key] = (MR.counters[key] || 0) + 1;
+
+    // Reload registry
+    await mrLoadMotors();
+
+    // Reset form
+    mrResetForm();
+
+  } catch (e) {
+    banner.textContent = `Registration failed: ${e.message}`;
+    banner.className = 'mr-banner error';
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 6000);
+    btn.disabled = false;
+    btn.textContent = 'Register motor';
+  }
+}
+
+// ── Preview identifier (local, not from backend) ────────────
+function mrPreviewId() {
+  if (!MR.sel.motor || !MR.sel.dir) return null;
+  const key = `${MR.sel.motor.code}-${MR.sel.dir}`;
+  const next = (MR.counters[key] || 0) + 1;
+  return `${MR.sel.motor.code}-${MR.sel.dir}-${String(next).padStart(2,'0')}`;
+}
+
+function mrUpdatePreview() {
+  const el = document.getElementById('mrPreviewId');
+  const meta = document.getElementById('mrPreviewMeta');
+  const btn = document.getElementById('mrRegBtn');
+  const id = mrPreviewId();
+  if (id) {
+    el.textContent = id;
+    el.className = 'mr-prev-id';
+    meta.innerHTML = `${MR.sel.motor.name} &middot; ${MR.sel.dir === 'R' ? 'Reverse' : 'Forward'} &middot; ${MR.sel.motor.shaft} shaft`;
+    btn.disabled = false;
+    btn.className = 'mr-reg-btn ready';
+  } else {
+    el.textContent = MR.sel.motor ? 'Select direction' : 'Select motor + direction';
+    el.className = 'mr-prev-id empty';
+    meta.textContent = '';
+    btn.disabled = true;
+    btn.className = 'mr-reg-btn';
+  }
+}
+
+// ── Selection handlers ────────────────────────────────────────
+function mrSelectMotor(id) {
+  MR.sel.motor = MOTOR_MODELS.find(m => m.id === id);
+  document.querySelectorAll('.mr-mc').forEach(el => el.classList.remove('sel'));
+  document.getElementById(`mr-mc-${id}`)?.classList.add('sel');
+
+  const isDual = MR.sel.motor.shaft === 'Dual';
+  const btnR = document.getElementById('mr-btn-R');
+  if (isDual) {
+    btnR.classList.add('off');
+    if (MR.sel.dir === 'R') { MR.sel.dir = null; btnR.classList.remove('sel'); }
+  } else {
+    btnR.classList.remove('off');
+  }
+  mrUpdateChassisAvail();
+  mrUpdatePreview();
+}
+
+function mrSelectDir(dir) {
+  if (dir === 'R' && MR.sel.motor?.shaft === 'Dual') {
+    showToast('PRO motors use Forward direction only', true);
+    return;
+  }
+  MR.sel.dir = dir;
+  MR.sel.chassis = [];
+  document.querySelectorAll('.mr-dir-btn').forEach(el => el.classList.remove('sel'));
+  document.getElementById(`mr-btn-${dir}`)?.classList.add('sel');
+  document.querySelectorAll('.mr-ctag').forEach(el => el.classList.remove('sel'));
+  mrUpdatePreview();
+}
+
+function mrToggleChassis(name) {
+  const idx = MR.sel.chassis.indexOf(name);
+  const slug = name.replace(/[\s-]/g,'_');
+  const el = document.getElementById(`mr-ct-${slug}`);
+  if (idx === -1) { MR.sel.chassis.push(name); el?.classList.add('sel'); }
+  else { MR.sel.chassis.splice(idx,1); el?.classList.remove('sel'); }
+}
+
+function mrSelectProfile(id) {
+  MR.sel.profileId = id;
+  MR.sel.progs = [];
+  document.querySelectorAll('.mr-ptab').forEach(el => el.classList.remove('sel'));
+  document.getElementById(id ? `mr-pt-${id}` : 'mr-pt-none')?.classList.add('sel');
+  mrRenderSubprogs();
+  mrRenderSeq();
+}
+
+function mrToggleProg(progId, name, mbc2) {
+  const idx = MR.sel.progs.findIndex(p => p.id === progId);
+  if (idx === -1) {
+    MR.sel.progs.push({ id: progId, name, mbc2 });
+    document.getElementById(`mr-sp-${progId}`)?.classList.add('sel');
+  } else {
+    MR.sel.progs.splice(idx, 1);
+    document.getElementById(`mr-sp-${progId}`)?.classList.remove('sel');
+    const badge = document.getElementById(`mr-spb-${progId}`);
+    if (badge) badge.style.display = 'none';
+  }
+  MR.sel.progs.forEach((p, i) => {
+    const b = document.getElementById(`mr-spb-${p.id}`);
+    if (b) { b.style.display = 'flex'; b.textContent = i + 1; }
+  });
+  mrRenderSeq();
+}
+
+function mrRemoveProg(progId) {
+  MR.sel.progs = MR.sel.progs.filter(p => p.id !== progId);
+  document.getElementById(`mr-sp-${progId}`)?.classList.remove('sel');
+  const badge = document.getElementById(`mr-spb-${progId}`);
+  if (badge) badge.style.display = 'none';
+  MR.sel.progs.forEach((p, i) => {
+    const b = document.getElementById(`mr-spb-${p.id}`);
+    if (b) { b.style.display = 'flex'; b.textContent = i + 1; }
+  });
+  mrRenderSeq();
+}
+
+function mrUpdateChassisAvail() {
+  if (!MR.sel.motor) return;
+  const isDual = MR.sel.motor.shaft === 'Dual';
+  Object.entries(CHASSIS_GROUPS).forEach(([grp, data]) => {
+    data.items.forEach(name => {
+      const slug = name.replace(/[\s-]/g,'_');
+      const el = document.getElementById(`mr-ct-${slug}`);
+      if (!el) return;
+      const ok = (isDual && grp === 'Midship') || (!isDual && grp !== 'Midship');
+      el.classList.toggle('na', !ok);
+      if (!ok && MR.sel.chassis.includes(name)) {
+        MR.sel.chassis = MR.sel.chassis.filter(c => c !== name);
+        el.classList.remove('sel');
+      }
+    });
+  });
+}
+
+// ── Reset form ───────────────────────────────────────────────
+function mrResetForm() {
+  MR.sel = { motor:null, dir:null, chassis:[], profileId:null, progs:[] };
+  document.querySelectorAll('.mr-mc').forEach(el => el.classList.remove('sel'));
+  document.querySelectorAll('.mr-dir-btn').forEach(el => el.classList.remove('sel'));
+  document.getElementById('mr-btn-R')?.classList.remove('off');
+  document.querySelectorAll('.mr-ctag').forEach(el => el.classList.remove('sel'));
+  document.querySelectorAll('.mr-ptab').forEach(el => el.classList.remove('sel'));
+  const preTreat = document.getElementById('mrPreTreatment');
+  if (preTreat) preTreat.value = '';
+  document.getElementById('mrNotes').value = '';
+  mrRenderSubprogs();
+  mrRenderSeq();
+  mrUpdatePreview();
+}
+
+// ── Render helpers ───────────────────────────────────────────
+function mrStarBars(val) {
+  let h = '<div class="mr-sbars">';
+  for (let i = 1; i <= 4; i++) h += `<div class="mr-sbar ${i<=val?'on':''}"></div>`;
+  return h + '</div>';
+}
+
+function mrMotorCard(m) {
+  return `<div class="mr-mc" id="mr-mc-${m.id}" onclick="mrSelectMotor(${m.id})">
+    <div class="mr-mcode">${m.code}</div>
+    <div class="mr-mname">${m.name}</div>
+    <div class="mr-srow"><span class="mr-slbl">spd</span>${mrStarBars(m.speed)}</div>
+    <div class="mr-srow"><span class="mr-slbl">torque</span>${mrStarBars(m.torque)}</div>
+  </div>`;
+}
+
+function mrRenderProfileTabs() {
+  const wrap = document.getElementById('mrProfileTabs');
+  if (!wrap) return;
+  let h = `<div class="mr-ptab none" id="mr-pt-none" onclick="mrSelectProfile(null)">None / custom</div>`;
+  MR.profiles.forEach(p => {
+    h += `<div class="mr-ptab" id="mr-pt-${p.profile_id}" onclick="mrSelectProfile(${p.profile_id})">${p.name}</div>`;
+  });
+  wrap.innerHTML = h;
+}
+
+function mrRenderSubprogs() {
+  const grid = document.getElementById('mrSubprogGrid');
+  if (!grid) return;
+  if (!MR.sel.profileId) {
+    grid.innerHTML = '<div class="mr-no-profile">Select a profile above to link sub-programs, or choose "None / custom" to skip.</div>';
+    return;
+  }
+  const profile = MR.profiles.find(p => p.profile_id === MR.sel.profileId);
+  if (!profile) return;
+  grid.innerHTML = profile.programs.map(p => `
+    <div class="mr-spcard" id="mr-sp-${p.program_id}" onclick="mrToggleProg(${p.program_id},'${p.name}','${p.mbc2_label}')">
+      <div class="mr-sp-name">${p.name}</div>
+      <div class="mr-sp-label">MBC2: ${p.mbc2_label || '—'}</div>
+      <div class="mr-sp-note">${p.notes || ''}</div>
+      <div class="mr-sp-badge" id="mr-spb-${p.program_id}" style="display:none"></div>
+    </div>`).join('');
+}
+
+function mrRenderSeq() {
+  const row = document.getElementById('mrSeqRow');
+  if (!row) return;
+  if (!MR.sel.progs.length) {
+    row.innerHTML = '<span class="mr-seq-empty">No programs selected</span>';
+    return;
+  }
+  let h = '';
+  MR.sel.progs.forEach((p, i) => {
+    if (i > 0) h += '<span class="mr-seq-arrow">&#8594;</span>';
+    h += `<div class="mr-seq-chip">${p.name}<span class="mr-rm" onclick="mrRemoveProg(${p.id})">&#x2715;</span></div>`;
+  });
+  row.innerHTML = h;
+}
+
+function mrRenderRegistry() {
+  const wrap = document.getElementById('mrRegList');
+  if (!wrap) return;
+  if (!MR.motors.length) {
+    wrap.innerHTML = '<p class="mr-empty">No motors registered yet.</p>';
+    return;
+  }
+  let h = '';
+  MR.motors.forEach(m => {
+    const statusClass = m.status === 'Active' ? 'active' : 'retired';
+    h += `<div class="mr-mrow" onclick="mrShowMotorDetail(${m.motor_id})">
+      <div class="mr-mdot ${statusClass}"></div>
+      <div class="mr-mid">${m.identifier}</div>
+      <div class="mr-mmod">${m.model_name} &middot; ${m.breakin_direction === 'R' ? 'Reverse' : 'Forward'}</div>
+      <div class="mr-msessions">${m.total_sessions || 0} sessions</div>
+      <div class="mr-mbest">${m.best_peak_rpm ? m.best_peak_rpm.toLocaleString() + ' RPM' : '—'}</div>
+      <div class="mr-mdate">${m.date_registered}</div>
+    </div>`;
+  });
+  wrap.innerHTML = h;
+}
+
+// ── Tab switching within motor registry ──────────────────────
+function mrSwitchTab(tab) {
+  MR.activeTab = tab;
+  document.querySelectorAll('.mr-tab').forEach((el, i) => {
+    el.classList.toggle('active', ['register','registry'][i] === tab);
+  });
+  document.getElementById('mrPanelRegister').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('mrPanelRegistry').style.display = tab === 'registry' ? 'block' : 'none';
+  if (tab === 'registry') mrLoadMotors();
+}
+
+// ── Build DOM and init ────────────────────────────────────────
+function initMotorRegistry() {
+  const root = document.getElementById('motorRegistryRoot');
+  if (!root) return;
+
+  const single = MOTOR_MODELS.filter(m => m.shaft === 'Single');
+  const pro    = MOTOR_MODELS.filter(m => m.shaft === 'Dual');
+
+  let chassisHtml = '';
+  Object.entries(CHASSIS_GROUPS).forEach(([grp, data]) => {
+    const note = 'R = race direction (confirmed all chassis)';
+    chassisHtml += `<div class="mr-cgrp-row">${grp} mount — ${note}</div>`;
+    data.items.forEach(name => {
+      const slug = name.replace(/[\s-]/g,'_');
+      chassisHtml += `<div class="mr-ctag" id="mr-ct-${slug}" onclick="mrToggleChassis('${name}')">${name}</div>`;
+    });
+  });
+
+  root.innerHTML = `
+    <div class="mr-tab-row">
+      <div class="mr-tab active" onclick="mrSwitchTab('register')">Register motor</div>
+      <div class="mr-tab" onclick="mrSwitchTab('registry')">Motor registry</div>
+    </div>
+
+    <div id="mrBanner" class="mr-banner" style="display:none"></div>
+
+    <div id="mrPanelRegister">
+      <p class="mr-sec-lbl">1. Select motor model</p>
+
+      <div class="mr-collapse-hdr" onclick="mrToggleSection('single')" id="mr-hdr-single">
+        <span class="mr-cht">Single shaft <span class="mr-chc">10 motors</span></span>
+        <span class="mr-cha" id="mr-cha-single">&#9660;</span>
+      </div>
+      <div class="mr-collapse-body" id="mr-body-single" style="max-height:600px;overflow:hidden;transition:max-height 0.25s ease">
+        <div class="mr-motor-grid">${single.map(mrMotorCard).join('')}</div>
+      </div>
+
+      <div class="mr-collapse-hdr" onclick="mrToggleSection('pro')" id="mr-hdr-pro" style="margin-top:4px">
+        <span class="mr-cht">PRO / Dual shaft <span class="mr-chc">MA · MS · ME chassis only</span></span>
+        <span class="mr-cha" id="mr-cha-pro" style="transform:rotate(-90deg)">&#9660;</span>
+      </div>
+      <div class="mr-collapse-body" id="mr-body-pro" style="max-height:0;overflow:hidden;transition:max-height 0.25s ease">
+        <div class="mr-motor-grid">${pro.map(mrMotorCard).join('')}</div>
+      </div>
+
+      <p class="mr-sec-lbl" style="margin-top:1.5rem">2. Break-in direction</p>
+      <div class="mr-dir-row">
+        <div class="mr-dir-btn" id="mr-btn-R" onclick="mrSelectDir('R')">
+          <span class="mr-dir-icon">&#8634;</span>Reverse
+        </div>
+        <div class="mr-dir-btn" id="mr-btn-F" onclick="mrSelectDir('F')">
+          <span class="mr-dir-icon">&#8635;</span>Forward
+        </div>
+      </div>
+
+      <p class="mr-sec-lbl">3. Target chassis <span style="font-weight:400;text-transform:none;letter-spacing:0">(select all that apply)</span></p>
+      <div class="mr-chassis-grid">${chassisHtml}</div>
+      <div style="margin-bottom:1.5rem"></div>
+
+      <p class="mr-sec-lbl">4. Break-in program</p>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Select profile</div>
+      <div class="mr-profile-tabs" id="mrProfileTabs"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Select sub-programs run <span style="font-weight:400">(in order)</span></div>
+      <div class="mr-subprog-grid" id="mrSubprogGrid"></div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;margin-top:10px">Sequence</div>
+      <div class="mr-seq-row" id="mrSeqRow"><span class="mr-seq-empty">No programs selected</span></div>
+      <div style="margin-bottom:1.5rem"></div>
+
+      <p class="mr-sec-lbl">5. Pre-treatment <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></p>
+      <select class="mr-notes" id="mrPreTreatment" style="margin-bottom:6px;padding:5px 8px;cursor:pointer;">
+        <option value="">None / dry</option>
+        <option value="Water">Water break-in</option>
+        <option value="IPA">IPA (isopropyl alcohol)</option>
+        <option value="ChemZ No8">ChemZ No8 multilube</option>
+        <option value="Light oil">Light oil (bearing/bushing)</option>
+        <option value="Motor spray">Motor spray / contact cleaner</option>
+        <option value="Other">Other (see notes)</option>
+      </select>
+      <textarea class="mr-notes" id="mrNotes" rows="2" placeholder="Additional notes — batch date, purchase source, condition..."></textarea>
+
+      <p class="mr-sec-lbl" style="margin-top:1.5rem">Motor identifier</p>
+      <div class="mr-preview-box">
+        <div id="mrPreviewId" class="mr-prev-id empty">Select motor + direction</div>
+        <div id="mrPreviewMeta" class="mr-prev-meta"></div>
+      </div>
+
+      <button class="mr-reg-btn" id="mrRegBtn" disabled onclick="mrSubmitRegistration()">Register motor</button>
+    </div>
+
+    <div id="mrPanelRegistry" style="display:none">
+      <div id="mrRegList"><p class="mr-empty">Loading...</p></div>
+    </div>
+  `;
+
+  // Section toggle state
+  MR._secOpen = { single: true, pro: false };
+
+  mrLoadProfiles();
+  mrRenderSubprogs();
+  mrRenderSeq();
+  mrUpdatePreview();
+}
+
+function mrToggleSection(key) {
+  MR._secOpen[key] = !MR._secOpen[key];
+  const body  = document.getElementById(`mr-body-${key}`);
+  const arrow = document.getElementById(`mr-cha-${key}`);
+  if (MR._secOpen[key]) { body.style.maxHeight = '600px'; arrow.style.transform = ''; }
+  else                   { body.style.maxHeight = '0';    arrow.style.transform = 'rotate(-90deg)'; }
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVE MOTOR & SESSION LINKING
+// ═══════════════════════════════════════════════════════════════
+let activeMotorId = null;      // DB motor_id
+let activeMotorRecord = null;  // full motor object
+let sessionMotorId = null;     // motor_id for current recording session
+let sessionProgramId = null;   // program_id for current recording session
+let sessionDbId = null;        // DB session_id after creation
+let registeredMotors = [];     // cached motor list
+
+// Baseline program — always available, not in program library
+const BASELINE_PROGRAM = {
+  id: '__baseline__',
+  name: 'Baseline 3.0V',
+  mbc2Label: 'BASE',
+  isBaseline: true,
+  steps: [
+    { volts: 3.0, dir: 'F', time: '2:00', cool: '1:00' },
+    { volts: 3.0, dir: 'R', time: '2:00', cool: 'Full Cool' }
+  ]
+};
+
+async function loadRegisteredMotors() {
+  try {
+    const data = await apiGet('/api/motors/all');
+    registeredMotors = data ? (data.motors || []) : [];
+    populateMotorDropdown();
+  } catch(e) {
+    registeredMotors = [];
+  }
+}
+
+function populateMotorDropdown() {
+  const sel = document.getElementById('activeMotorSelect');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Select Motor —</option>';
+  registeredMotors.filter(m => m.status === 'Active').forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.motor_id;
+    opt.textContent = m.identifier + '  ' + m.model_name;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+function onActiveMotorChange() {
+  const sel = document.getElementById('activeMotorSelect');
+  const motorId = parseInt(sel.value);
+  activeMotorId = motorId || null;
+  activeMotorRecord = motorId ? registeredMotors.find(m => m.motor_id === motorId) : null;
+
+  const idEl = document.getElementById('activeMotorId');
+  const nameEl = document.getElementById('activeMotorName');
+
+  if (activeMotorRecord) {
+    idEl.textContent = activeMotorRecord.identifier;
+    idEl.style.display = 'block';
+    nameEl.textContent = activeMotorRecord.model_name + ' · ' + (activeMotorRecord.breakin_direction === 'R' ? 'Reverse' : 'Forward');
+  } else {
+    idEl.style.display = 'none';
+    nameEl.textContent = '';
+  }
+
+  // Reload program dropdown filtered to this motor's linked programs + baseline
+  populateProgramDropdownForMotor(activeMotorRecord);
+}
+
+function populateProgramDropdownForMotor(motor) {
+  const sel = document.getElementById('progSelector');
+  sel.innerHTML = '<option value="">— Select Program —</option>';
+
+  // Add baseline program from library if it exists, otherwise use __baseline__ fallback
+  const baselineProfile = programLibrary.profiles.find(p => p.id === 'baseline-001');
+  const baselineProg = baselineProfile?.programs?.[0];
+  const baseOpt = document.createElement('option');
+  baseOpt.value = '__baseline__';
+  baseOpt.textContent = baselineProg
+    ? `── BASELINE (${baselineProg.mbc2Label}) 1.0→3.0V ──`
+    : '── Baseline 3.0V ──';
+  sel.appendChild(baseOpt);
+
+  // Add separator then program library
+  const sep = document.createElement('option');
+  sep.disabled = true;
+  sep.textContent = '──────────────────';
+  sel.appendChild(sep);
+
+  // Add all profiles/programs from library
+  programLibrary.profiles.forEach(profile => {
+    const grp = document.createElement('optgroup');
+    grp.label = profile.name;
+    profile.programs.forEach(prog => {
+      const opt = document.createElement('option');
+      opt.value = profile.id + '|' + prog.id;
+      opt.textContent = prog.name + ' (' + (prog.mbc2Label || '—') + ')';
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+
+  // Don't reset progName/progMotor here — they are managed by updateActiveProgramDisplay()
+
+  // Re-sync benchmark type row visibility since rebuilding the <select> doesn't fire change
+  const benchRow = document.getElementById('benchmarkType')?.closest('div');
+  if (benchRow) benchRow.style.display = (sel.value === '__baseline__') ? 'flex' : 'none';
+}
+
+// startRecording/stopRecording overrides consolidated below
+
+async function finaliseSession() {
+  const peakRpm = Math.max(...sessionData.map(r => r.rpm));
+  const avgRpm = Math.round(sessionData.reduce((a,r) => a + r.rpm, 0) / sessionData.length);
+  const peakTemp = Math.max(...sessionData.map(r => r.temp <= -270 ? 0 : r.temp));
+  const selVal = document.getElementById('progSelector').value;
+
+  await apiPost('/api/motors/session/finalise', {
+    session_id: sessionDbId,
+    motor_id: sessionMotorId,
+    program_id: sessionProgramId,
+    is_baseline: selVal === '__baseline__',
+    peak_rpm: peakRpm,
+    avg_rpm: avgRpm,
+    peak_temp: peakTemp,
+    row_count: sessionData.length
+  });
+}
+
+function resolveSelectedProgramDbId() {
+  const selVal = document.getElementById('progSelector').value;
+  if (!selVal || selVal === '__baseline__') return null;
+  // format: profileId|programId — programId here is the JSON library id, not the DB id
+  // Match it against MR.profiles using the mbc2_label or name as a bridge
+  const parts = selVal.split('|');
+  const profileJsonId = parts[0];
+  const progJsonId = parts[1];
+  if (!MR.profiles || !MR.profiles.length) return null;
+
+  // Find the matching library profile and program by JSON id
+  const libProfile = programLibrary.profiles.find(p => p.id === profileJsonId);
+  const libProg = libProfile ? libProfile.programs.find(p => p.id === progJsonId) : null;
+  if (!libProg) return null;
+
+  // Match against DB profiles by name + mbc2_label
+  for (const dbProfile of MR.profiles) {
+    for (const dbProg of dbProfile.programs) {
+      if (dbProg.mbc2_label === libProg.mbc2Label && dbProg.name === libProg.name) {
+        return dbProg.program_id;
+      }
+    }
+  }
+  return null;
+}
+
+// Motor detail view in Motors tab
+async function mrShowMotorDetail(motorId) {
+  // Check both caches — registeredMotors (right panel) and MR.motors (motors tab registry)
+  const motor = registeredMotors.find(m => m.motor_id === motorId)
+             || MR.motors.find(m => m.motor_id === motorId);
+  if (!motor) return;
+
+  const detailEl = document.getElementById('mrMotorDetail');
+  if (!detailEl) return;
+
+  detailEl.style.display = 'block';
+
+  // Fetch sessions for this motor from DB
+  const data = await apiGet('/api/motors/' + motor.identifier + '/sessions');
+  const sessions = data ? (data.sessions || []) : [];
+
+  let sessHtml = '';
+  if (!sessions.length) {
+    sessHtml = '<div class="mr-empty" style="padding:8px 0">No sessions recorded yet.</div>';
+  } else {
+    sessions.forEach((s, i) => {
+      sessHtml += `<div class="mr-session-row">
+        <span class="mr-session-type ${s.session_type}">${s.session_type}</span>
+        <span style="color:var(--text2);font-family:var(--mono);font-size:11px">${s.program_name || '—'}</span>
+        <span class="mr-session-rpm">${s.peak_rpm ? s.peak_rpm.toLocaleString() + ' RPM' : '—'}</span>
+        <button class="mr-compare-btn" id="cmpBtn-${s.session_id}" onclick="mrToggleCompare(${s.session_id}, ${motorId}, this)">Compare</button>
+        <span class="mr-session-date">${(s.session_date||'').slice(0,10)}</span>
+      </div>`;
+    });
+  }
+
+  detailEl.innerHTML = `
+    <div class="mr-detail-panel">
+      <div class="mr-detail-header">
+        <div>
+          <div class="mr-detail-id">${motor.identifier}</div>
+          <div class="mr-detail-model">${motor.model_name} · ${motor.breakin_direction === 'R' ? 'Reverse' : 'Forward'}</div>
+        </div>
+        <button class="mr-detail-close" onclick="mrCloseDetail()">✕</button>
+      </div>
+      <div style="font-family:var(--display);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:6px;">SESSIONS</div>
+      ${sessHtml}
+    </div>`;
+}
+
+function mrCloseDetail() {
+  const el = document.getElementById('mrMotorDetail');
+  if (el) el.style.display = 'none';
+}
+
+// Compare sessions — side-by-side stats + RPM overlay
+let compareSessionIds = [];
+let compareMotorIds = [];   // parallel array tracking which motor each session belongs to
+const compareColors = ['#00e5ff','#ff6b00','#39ff14','#ffcc00','#ff2244'];
+// Stable colour assignment keyed by sessionId — colour survives remove/re-add
+const compareColorMap = new Map();
+
+function getCompareColor(sessionId) {
+  if (!compareColorMap.has(sessionId)) {
+    // Assign the next unused colour, or cycle if all 5 used
+    const used = new Set(compareColorMap.values());
+    const next = compareColors.find(c => !used.has(c)) || compareColors[compareColorMap.size % compareColors.length];
+    compareColorMap.set(sessionId, next);
+  }
+  return compareColorMap.get(sessionId);
+}
+
+async function mrToggleCompare(sessionId, motorId, btn) {
+  const idx = compareSessionIds.indexOf(sessionId);
+  if (idx === -1) {
+    if (compareSessionIds.length >= 5) { showToast('Max 5 sessions for comparison', true); return; }
+    compareSessionIds.push(sessionId);
+    compareMotorIds.push(motorId);
+    getCompareColor(sessionId); // assign stable colour now
+    btn.classList.add('active');
+  } else {
+    compareSessionIds.splice(idx, 1);
+    compareMotorIds.splice(idx, 1);
+    compareColorMap.delete(sessionId); // release colour slot
+    btn.classList.remove('active');
+  }
+  await renderComparisonPanel();
+}
+
+function clearComparison() {
+  compareSessionIds = [];
+  compareMotorIds = [];
+  compareColorMap.clear();
+  document.querySelectorAll('.mr-compare-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('comparePanel');
+  if (panel) panel.style.display = 'none';
+  drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
+}
+
+async function renderComparisonPanel() {
+  if (!compareSessionIds.length) {
+    const panel = document.getElementById('comparePanel');
+    if (panel) panel.style.display = 'none';
+    drawChart('chartRpm', chartData.rpm, '#00e5ff', null, true, getTargetRpm());
+    return;
+  }
+
+  // Fetch all session data in parallel — use push not index assignment to avoid sparse array holes
+  const datasets = await Promise.all(compareSessionIds.map(async (sid, i) => {
+    const motorId = compareMotorIds[i];
+    const motor = registeredMotors.find(m => m.motor_id === motorId) || MR.motors.find(m => m.motor_id === motorId);
+    const data = await apiGet('/api/motors/session/' + sid + '/data').catch(() => null);
+    const rows = data?.rows || [];
+    const rpms = rows.map(r => r.rpm || 0);
+    const amps = rows.map(r => r.current_ma ? r.current_ma / 1000 : 0);
+    const kvs  = rows.map(r => r.kv_efficiency || 0);
+    const temps = rows.filter(r => r.temp_c > -270).map(r => r.temp_c || 0);
+    return {
+      sessionId: sid,
+      color: getCompareColor(sid),  // stable colour keyed to session ID
+      motorId,
+      label: motor ? motor.identifier : 'Session ' + sid,
+      model: motor ? motor.model_name : '—',
+      rpms,
+      peakRpm:  rpms.length ? Math.max(...rpms) : 0,
+      avgRpm:   rpms.length ? Math.round(rpms.reduce((a,b)=>a+b,0)/rpms.length) : 0,
+      peakAmps: amps.length ? parseFloat(Math.max(...amps).toFixed(3)) : 0,
+      avgAmps:  amps.length ? parseFloat((amps.reduce((a,b)=>a+b,0)/amps.length).toFixed(3)) : 0,
+      peakKv:   kvs.length  ? Math.max(...kvs) : 0,
+      avgKv:    kvs.length  ? Math.round(kvs.reduce((a,b)=>a+b,0)/kvs.length) : 0,
+      peakTemp: temps.length ? Math.round(Math.max(...temps)) : null,
+    };
+  }));
+
+  // Filter out any null/undefined entries (failed API calls)
+  const validDatasets = datasets.filter(Boolean);
+
+  // Build or update comparison panel below motor detail
+  let panel = document.getElementById('comparePanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'comparePanel';
+    panel.style.cssText = 'margin-top:12px;border:1px solid var(--border2);background:var(--bg2);';
+    const root = document.getElementById('motorRegistryRoot');
+    root.parentElement.appendChild(panel);
+  }
+  panel.style.display = 'block';
+
+  if (!validDatasets.length) {
+    showToast('No session data available to compare', true);
+    return;
+  }
+
+  const maxRpm = Math.max(...validDatasets.map(d => d.peakRpm), 1);
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg3);">
+      <span style="font-family:var(--display);font-weight:900;font-size:14px;letter-spacing:3px;color:var(--accent);">MOTOR COMPARISON</span>
+      <button class="icon-btn danger" onclick="clearComparison()">✕ Clear</button>
+    </div>
+    <div style="overflow-x:auto;padding:12px;">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:420px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:4px 8px;color:var(--text3);font-family:var(--display);font-weight:600;font-size:9px;letter-spacing:2px;border-bottom:1px solid var(--border);">METRIC</th>
+            ${validDatasets.map((d,i) => `
+              <th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--border);border-left:2px solid ${d.color};">
+                <div style="font-family:var(--display);font-weight:900;font-size:13px;color:${d.color};">${d.label}</div>
+                <div style="font-size:9px;color:var(--text3);font-weight:400;">${d.model}</div>
+              </th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${[
+            ['Peak RPM', d => d.peakRpm ? d.peakRpm.toLocaleString() : '—', true],
+            ['Avg RPM',  d => d.avgRpm  ? d.avgRpm.toLocaleString()  : '—', false],
+            ['Peak kV',  d => d.peakKv  ? d.peakKv.toLocaleString()  : '—', true],
+            ['Avg kV',   d => d.avgKv   ? d.avgKv.toLocaleString()   : '—', false],
+            ['Peak Amps',d => d.peakAmps ? d.peakAmps + 'A' : '—', false],
+            ['Avg Amps', d => d.avgAmps  ? d.avgAmps + 'A'  : '—', false],
+            ['Peak Temp',d => d.peakTemp != null ? d.peakTemp + '°C' : '—', false],
+          ].map(([label, val, highlight]) => {
+            const nums = validDatasets.map(d => {
+              const v = val(d);
+              return v === '—' ? -Infinity : parseFloat(v.replace(/[^\d.]/g,''));
+            });
+            const best = Math.max(...nums);
+            return `<tr>
+              <td style="padding:5px 8px;color:var(--text2);font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:1px;">${label}</td>
+              ${validDatasets.map((d,i) => {
+                const v = val(d);
+                const n = parseFloat(v.replace(/[^\d.]/g,''));
+                const isBest = highlight && n === best && n > 0;
+                return `<td style="text-align:right;padding:5px 8px;border-left:1px solid var(--border);font-family:var(--display);font-weight:${isBest?'900':'600'};font-size:${isBest?'14':'11'}px;color:${isBest?d.color:'var(--text2)'};">${v}${isBest?' ★':''}</td>`;
+              }).join('')}
+            </tr>`;
+          }).join('')}
+          <tr>
+            <td style="padding:5px 8px;color:var(--text2);font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:1px;">RPM bar</td>
+            ${validDatasets.map(d => {
+              const pct = maxRpm > 0 ? Math.round((d.peakRpm / maxRpm) * 100) : 0;
+              return `<td style="text-align:right;padding:5px 8px;border-left:1px solid var(--border);">
+                <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+                  <div style="width:${pct}px;max-width:80px;height:6px;background:${d.color};border-radius:2px;transition:width 0.3s;"></div>
+                  <span style="font-size:9px;color:var(--text3);">${pct}%</span>
+                </div>
+              </td>`;
+            }).join('')}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:0 12px 8px;font-size:9px;color:var(--text3);">★ Best in comparison &nbsp;·&nbsp; RPM chart overlay shown on Charts tab</div>
+  `;
+
+  // Also draw the RPM chart overlay on the Charts tab
+  renderComparisonChart(validDatasets);
+}
+
+function renderComparisonChart(datasets) {
+  switchTab('charts');
+  const canvas = document.getElementById('chartRpm');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width || canvas.offsetWidth;
+  const H = canvas.height || canvas.offsetHeight || 120;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0a0c0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e2730'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = Math.round(H*i/4)+0.5;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  const allRpms = datasets.flatMap(d => d.rpms);
+  const allMax = allRpms.length ? Math.max(...allRpms) * 1.1 : 1;
+
+  datasets.forEach(ds => {
+    if (!ds.rpms.length) return;
+    const toX = i => (i / (ds.rpms.length - 1)) * W;
+    const toY = v => H - (v / allMax) * (H - 4) - 2;
+
+    // Fill
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, ds.color + '30');
+    grad.addColorStop(1, ds.color + '00');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(toX(0), H);
+    ds.rpms.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
+    ctx.lineTo(toX(ds.rpms.length - 1), H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Line
+    ctx.strokeStyle = ds.color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ds.rpms.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+    ctx.stroke();
+  });
+
+  // Legend
+  datasets.forEach((ds, i) => {
+    ctx.fillStyle = ds.color;
+    ctx.fillRect(10, 10 + i * 18, 12, 3);
+    ctx.fillStyle = '#c8d8e8';
+    ctx.font = '10px monospace';
+    ctx.fillText(ds.label + ' — peak ' + ds.peakRpm.toLocaleString(), 28, 14 + i * 18);
+  });
+}
+
+
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// MOTOR ROSTER
+// ═══════════════════════════════════════════════════════════════
+let rosterData = [];
+let rosterSort = { col: 'best_peak_rpm', dir: -1 };
+
+async function loadRoster() {
+  const tbody = document.getElementById('rosterBody');
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr>';
+  const data = await apiGet('/api/motors/roster');
+  if (!data || !data.motors) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:20px;">Failed to load — is server running?</td></tr>';
+    return;
+  }
+  rosterData = data.motors;
+  filterRoster();
+}
+
+function filterRoster() {
+  const statusFilter = document.getElementById('rosterFilter').value;
+  const search = document.getElementById('rosterSearch').value.toLowerCase();
+  let filtered = rosterData.filter(m => {
+    if (statusFilter !== 'all' && m.status !== statusFilter) return false;
+    if (search && !m.identifier.toLowerCase().includes(search) &&
+        !m.model_name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  // Sort
+  filtered.sort((a, b) => {
+    const av = a[rosterSort.col] ?? (rosterSort.dir === -1 ? -Infinity : Infinity);
+    const bv = b[rosterSort.col] ?? (rosterSort.dir === -1 ? -Infinity : Infinity);
+    if (typeof av === 'string') return av.localeCompare(bv) * rosterSort.dir;
+    return (av - bv) * rosterSort.dir;
+  });
+  renderRoster(filtered);
+}
+
+function sortRoster(col) {
+  if (rosterSort.col === col) rosterSort.dir *= -1;
+  else { rosterSort.col = col; rosterSort.dir = -1; }
+  // Update header sort indicators
+  document.querySelectorAll('.roster-table th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === col) {
+      th.classList.add(rosterSort.dir === -1 ? 'sort-desc' : 'sort-asc');
+    }
+  });
+  filterRoster();
+}
+
+function renderRoster(motors) {
+  const tbody = document.getElementById('rosterBody');
+  if (!motors.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">No motors found</td></tr>';
+    return;
+  }
+
+  const trendIcon = t => {
+    if (t === 'improving') return '<span class="trend-badge trend-up" title="Improving">↑</span>';
+    if (t === 'declining') return '<span class="trend-badge trend-down" title="Declining">↓</span>';
+    if (t === 'plateaued') return '<span class="trend-badge trend-flat" title="Plateaued">→</span>';
+    return '<span class="trend-badge trend-flat" title="Insufficient data">—</span>';
+  };
+
+  const ratingBadge = r => {
+    const cls = ['A','B','C','D'].includes(r) ? r : 'NA';
+    return `<span class="rating-badge ${cls}">${r || '—'}</span>`;
+  };
+
+  tbody.innerHTML = motors.map(m => `
+    <tr class="${m.status !== 'Active' ? 'retired' : ''}" title="${m.identifier}">
+      <td style="font-family:var(--display);font-weight:700;font-size:13px;color:var(--accent);">
+        ${m.identifier}
+        ${m.status !== 'Active' ? `<span style="font-size:9px;color:var(--text3);margin-left:4px;">${m.status}</span>` : ''}
+      </td>
+      <td style="color:var(--text);">${m.model_name || '—'}</td>
+      <td><span class="rpm-val">${m.best_peak_rpm ? m.best_peak_rpm.toLocaleString() : '—'}</span></td>
+      <td><span class="eff-val">${m.efficiency_score ? m.efficiency_score.toLocaleString() + ' RPM/W' : '—'}</span></td>
+      <td>${ratingBadge(m.rating)}</td>
+      <td>${trendIcon(m.trend)}${m.trend_delta_rpm ? ` <span style="font-size:10px;color:var(--text3);">${m.trend_delta_rpm > 0 ? '+' : ''}${m.trend_delta_rpm}</span>` : ''}</td>
+      <td style="text-align:center;">${m.total_benchmarks || 0}</td>
+      <td style="text-align:center;">${m.total_sessions || 0}</td>
+      <td style="font-size:10px;">${m.status}</td>
+      <td>
+        <button class="icon-btn" onclick="showMotorDetail('${m.identifier}')" title="View detail">🔍</button>
+        ${m.status === 'Active'
+          ? `<button class="icon-btn" onclick="setMotorFromRoster(${m.motor_id}, '${m.identifier}')" title="Set as active">▶</button>`
+          : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setMotorFromRoster(motorId, identifier) {
+  activeMotorId = motorId;
+  activeMotorRecord = registeredMotors.find(m => m.motor_id === motorId) || null;
+
+  // Guard — only Active motors can be set as the working motor
+  if (activeMotorRecord && activeMotorRecord.status !== 'Active') {
+    showToast(identifier + ' is ' + activeMotorRecord.status + ' — cannot set as active', true);
+    activeMotorId = null;
+    activeMotorRecord = null;
+    return;
+  }
+
+  // Update the Active Motor dropdown in the right panel
+  const sel = document.getElementById('activeMotorSelect');
+  if (sel) sel.value = motorId;
+
+  // Update sidebar display labels
+  const idEl = document.getElementById('activeMotorId');
+  const nameEl = document.getElementById('activeMotorName');
+  if (activeMotorRecord) {
+    if (idEl) { idEl.textContent = activeMotorRecord.identifier; idEl.style.display = 'block'; }
+    if (nameEl) nameEl.textContent = activeMotorRecord.model_name + ' · ' + (activeMotorRecord.breakin_direction === 'R' ? 'Reverse' : 'Forward');
+    populateProgramDropdownForMotor(activeMotorRecord);
+  }
+
+  showToast('Active motor: ' + identifier);
+  switchTab('charts');
+}
+
+async function showMotorDetail(identifier) {
+  const modal = document.getElementById('motorDetailModal');
+  const body = document.getElementById('motorDetailBody');
+  const title = document.getElementById('motorDetailTitle');
+  title.textContent = identifier;
+  body.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;">Loading...</div>';
+  modal.classList.add('open');
+
+  // Fetch motor detail + benchmarks
+  const [motorData, benchData] = await Promise.all([
+    apiGet('/api/motors/' + identifier).catch(() => null),
+    apiGet('/api/motors/' + identifier + '/benchmarks').catch(() => null)
+  ]);
+
+  if (!motorData) {
+    body.innerHTML = '<div style="color:var(--danger);padding:20px;">Failed to load motor data</div>';
+    return;
+  }
+
+  const eff = benchData?.efficiency || {};
+  const benchmarks = benchData?.benchmarks || [];
+  const history = motorData.breakin_history || [];
+
+  // Build sparkline for RPM trend
+  const rpmValues = benchmarks.filter(b => b.peak_rpm).map(b => b.peak_rpm);
+  const maxRpm = Math.max(...rpmValues, 1);
+  const sparkline = rpmValues.length > 0
+    ? rpmValues.map((rpm, i) => {
+        const pct = Math.round((rpm / maxRpm) * 100);
+        const date = benchmarks.filter(b=>b.peak_rpm)[i]?.session_date?.slice(0,10) || '';
+        return `<div class="bench-bar" style="height:${pct}%" title="${rpm.toLocaleString()} RPM on ${date}">
+          <span class="bench-bar-label">${rpm.toLocaleString()}</span>
+        </div>`;
+      }).join('')
+    : '<span style="color:var(--text3);font-size:11px;">No benchmarks yet</span>';
+
+  body.innerHTML = `
+    <div class="bm-progress-row">
+      <div class="bm-stat">
+        <div class="bm-stat-label">Best Peak RPM</div>
+        <div class="bm-stat-value ${eff.peak_rpm > 33000 ? 'good' : ''}">${eff.peak_rpm ? eff.peak_rpm.toLocaleString() : '—'}</div>
+      </div>
+      <div class="bm-stat">
+        <div class="bm-stat-label">Efficiency</div>
+        <div class="bm-stat-value">${eff.score ? eff.score.toLocaleString() + ' RPM/W' : '—'}</div>
+      </div>
+      <div class="bm-stat">
+        <div class="bm-stat-label">Rating</div>
+        <div class="bm-stat-value">${eff.rating || '—'}</div>
+      </div>
+      <div class="bm-stat">
+        <div class="bm-stat-label">Benchmarks</div>
+        <div class="bm-stat-value">${benchmarks.length}</div>
+      </div>
+    </div>
+
+    <div style="padding:12px 16px 0;">
+      <div class="bench-chart-title">RPM Benchmark History</div>
+      <div class="bench-sparkline" style="margin-bottom:20px;">${sparkline}</div>
+    </div>
+
+    <div style="padding:0 16px 12px;">
+      <div class="bench-chart-title">Break-in History</div>
+      ${motorData.notes
+        ? `<div style="font-size:11px;color:var(--text2);padding:4px 0 8px;line-height:1.6;white-space:pre-line;border-bottom:1px solid var(--border);margin-bottom:6px;">${motorData.notes}</div>`
+        : `<div style="font-size:11px;color:var(--text3);padding:2px 0 8px;font-style:italic;">No notes recorded</div>`
+      }
+      ${history.length ? `
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:6px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;color:var(--text3);padding:4px 6px;border-bottom:1px solid var(--border);">Date</th>
+              <th style="text-align:left;color:var(--text3);padding:4px 6px;border-bottom:1px solid var(--border);">Profile</th>
+              <th style="text-align:left;color:var(--text3);padding:4px 6px;border-bottom:1px solid var(--border);">Program</th>
+              <th style="text-align:left;color:var(--text3);padding:4px 6px;border-bottom:1px solid var(--border);">MBC2</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${history.map(h => `<tr>
+              <td style="padding:3px 6px;color:var(--text3);">${h.date_run || '—'}</td>
+              <td style="padding:3px 6px;color:var(--text2);">${h.profile_name || '—'}</td>
+              <td style="padding:3px 6px;color:var(--text);">${h.program_name || '—'}</td>
+              <td style="padding:3px 6px;color:var(--accent);font-family:var(--display);font-weight:700;">${h.mbc2_label || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      ` : '<div style="color:var(--text3);font-size:11px;padding:6px 0;">No break-in history recorded</div>'}
+    </div>
+
+    <div style="padding:0 16px 16px;display:flex;gap:8px;">
+      ${motorData.status === 'Active'
+        ? `<button class="btn primary" onclick="setMotorFromRoster(${motorData.motor_id}, '${identifier}');document.getElementById('motorDetailModal').classList.remove('open')">▶ Set Active</button>`
+        : `<span style="font-family:var(--display);font-size:11px;letter-spacing:1px;color:var(--text3);padding:7px 0;">${motorData.status} — cannot set as active</span>`
+      }
+      ${motorData.status === 'Active'
+        ? `<button class="btn danger" onclick="retireMotor('${identifier}')">Retire Motor</button>`
+        : ''
+      }
+      <button class="btn" onclick="document.getElementById('motorDetailModal').classList.remove('open')">Close</button>
+    </div>
+  `;
+}
+
+async function retireMotor(identifier) {
+  if (!confirm('Retire motor ' + identifier + '? This marks it as retired in the DB.')) return;
+  const res = await apiPost('/api/motors/' + identifier + '/status', { status: 'Retired' });
+  if (res?.success) {
+    showToast(identifier + ' retired');
+    document.getElementById('motorDetailModal').classList.remove('open');
+    loadRoster();
+  } else {
+    showToast('Failed to retire motor', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BENCHMARK MODE
+// ═══════════════════════════════════════════════════════════════
+let benchmarkMode = false;
+let benchmarkTimer = null;
+let benchmarkData = [];
+let benchmarkStart = 0;
+const BENCHMARK_DURATION = 180; // 3 minutes (5 steps: 4x30s + 1x60s)
+
+function isBenchmarkSelected() {
+  return document.getElementById('progSelector').value === '__baseline__';
+}
+
+// Watch progSelector for baseline selection to show benchmark type
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('progSelector');
+  if (sel) sel.addEventListener('change', () => {
+    const benchRow = document.querySelector('#benchmarkType')?.closest('div');
+    if (benchRow) benchRow.style.display = isBenchmarkSelected() ? 'flex' : 'none';
+  });
+});
+
+// startRecording benchmark override consolidated below
+
+function startBenchmarkSession() {
+  if (!port) { showToast('Connect MBC2 first', true); return; }
+  benchmarkData = [];
+  benchmarkStart = Date.now();
+  benchmarkMode = true;
+
+  document.getElementById('benchmarkBanner').classList.add('active');
+  document.getElementById('bmResultPanel').classList.remove('show');
+  document.getElementById('btnRecord').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('runIndicator').style.display = 'inline';
+  setStatus('running', 'Benchmark');
+
+  // Start countdown
+  updateBenchmarkCountdown();
+  benchmarkTimer = setInterval(() => {
+    const elapsed = (Date.now() - benchmarkStart) / 1000;
+    if (elapsed >= BENCHMARK_DURATION) {
+      stopBenchmarkSession();
+    } else {
+      updateBenchmarkCountdown();
+    }
+  }, 500);
+
+  // Start DB session
+  if (activeMotorId) {
+    apiPost('/api/motors/session/start', {
+      motor_id: activeMotorId,
+      session_type: 'Benchmark'
+    }).then(data => {
+      if (data?.session_id) sessionDbId = data.session_id;
+    });
+  }
+
+  showToast('Benchmark started — 1.0V→3.0V ramp, 3 min total');
+}
+
+function updateBenchmarkCountdown() {
+  const elapsed = (Date.now() - benchmarkStart) / 1000;
+  const remaining = Math.max(0, BENCHMARK_DURATION - elapsed);
+  const mm = Math.floor(remaining / 60);
+  const ss = Math.floor(remaining % 60);
+  document.getElementById('bmCountdown').textContent = mm + ':' + String(ss).padStart(2, '0');
+}
+
+function stopBenchmarkSession() {
+  clearInterval(benchmarkTimer);
+  benchmarkMode = false;
+  document.getElementById('benchmarkBanner').classList.remove('active');
+
+  // Calculate benchmark stats from collected data
+  const validRows = benchmarkData.filter(r => r.rpm > 0 && r.volts > 0);
+  if (validRows.length) {
+    const peakRpm = Math.max(...validRows.map(r => r.rpm));
+    const avgRpm = Math.round(validRows.reduce((s, r) => s + r.rpm, 0) / validRows.length);
+    const peakCurrentMa = Math.round(Math.max(...validRows.map(r => r.amps)) * 1000);
+    const avgCurrentMa = Math.round(validRows.reduce((s, r) => s + r.amps, 0) / validRows.length * 1000);
+    const peakTemp = Math.max(...validRows.filter(r => r.temp > -270).map(r => r.temp));
+    const finalTemp = validRows[validRows.length - 1].temp;
+    const duration = Math.round((Date.now() - benchmarkStart) / 1000);
+
+    // Save to DB
+    if (sessionDbId && activeMotorId) {
+      const bmType = document.getElementById('benchmarkType').value || 'Periodic';
+      apiPost('/api/motors/session/finalise', {
+        session_id: sessionDbId,
+        motor_id: activeMotorId,
+        is_baseline: true,
+        benchmark_type: bmType,
+        direction: 'R',
+        voltage_v: 3.0,
+        peak_rpm: peakRpm,
+        avg_rpm: avgRpm,
+        peak_current_ma: peakCurrentMa,
+        avg_current_ma: avgCurrentMa,
+        peak_temp: peakTemp > -270 ? peakTemp : null,
+        final_temp: finalTemp > -270 ? finalTemp : null,
+        duration_sec: duration
+      }).then(res => {
+        if (res?.efficiency?.rating) {
+          showToast(`Benchmark saved — ${peakRpm.toLocaleString()} RPM — Rating: ${res.efficiency.rating}`);
+        }
+      });
+    }
+
+    // Show result
+    showBenchmarkResult({ peakRpm, avgRpm, peakCurrentMa, avgCurrentMa, peakTemp, finalTemp });
+  }
+
+  // Reset UI
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('runIndicator').style.display = 'none';
+  setStatus('connected', 'Connected');
+}
+
+function showBenchmarkResult({ peakRpm, avgRpm, peakCurrentMa, avgCurrentMa, peakTemp, finalTemp }) {
+  const avgAmps = avgCurrentMa / 1000;
+  const watts = 3.0 * avgAmps;
+  const rpmPerWatt = watts > 0 ? Math.round(avgRpm / watts) : 0;
+
+  // Determine rating
+  let rating = 'D';
+  if (rpmPerWatt >= 13000) rating = 'A';
+  else if (rpmPerWatt >= 11000) rating = 'B';
+  else if (rpmPerWatt >= 9000) rating = 'C';
+
+  // Per-step kV curve from benchmark data
+  const stepVoltages = [1.0, 1.5, 2.0, 2.5, 3.0];
+  const stepLabels = ['1.0V','1.5V','2.0V','2.5V','3.0V'];
+  const kvByStep = stepVoltages.map((v, i) => {
+    const stepRows = benchmarkData.filter(r => r.step === (i + 1) && r.rpm > 0 && r.volts > 0);
+    if (!stepRows.length) return null;
+    const avgKv = Math.round(stepRows.reduce((s,r) => s + r.kv, 0) / stepRows.length);
+    const avgA = (stepRows.reduce((s,r) => s + r.amps, 0) / stepRows.length).toFixed(3);
+    return { v, label: stepLabels[i], kv: avgKv, amps: avgA };
+  }).filter(Boolean);
+
+  // Display kV curve in the result panel
+  const panel = document.getElementById('bmResultPanel');
+  document.getElementById('bmResPeakRpm').textContent = peakRpm.toLocaleString();
+  document.getElementById('bmResRpmPerWatt').textContent = rpmPerWatt.toLocaleString();
+  document.getElementById('bmResAmps').textContent = avgAmps.toFixed(3) + 'A';
+  document.getElementById('bmResRating').textContent = rating;
+  const kvTbody = document.querySelector('#bmResKvTable tbody');
+  kvTbody.innerHTML = kvByStep.length
+    ? kvByStep.map(s => `<tr><td>${s.label}</td><td>${s.kv.toLocaleString()}</td><td>${s.amps}A</td></tr>`).join('')
+    : '<tr><td colspan="3" style="color:var(--text3);">No step data</td></tr>';
+  panel.classList.add('show');
+
+  showToast(`Peak: ${peakRpm.toLocaleString()} RPM | Rating: ${rating}`);
+}
+
+// Benchmark data collection is handled inside parseLine directly
+
+
+window.addEventListener('load', () => {
+  if (!('serial' in navigator)) {
+    document.getElementById('noSerialWarning').style.display = 'block';
+    document.getElementById('btnConnect').disabled = true;
+  }
+  loadLibrary();
+  loadFirmwareList();
+  initMotorRegistry();
+  loadRegisteredMotors();
+
+  // Server health check — show warning banner if server is offline
+  function checkServer() {
+    fetch(API + '/api/ping')
+      .then(r => {
+        if (r.ok) document.getElementById('serverWarn').classList.remove('show');
+        else document.getElementById('serverWarn').classList.add('show');
+      })
+      .catch(() => document.getElementById('serverWarn').classList.add('show'));
+  }
+  checkServer();
+  setInterval(checkServer, 5000);
+
+  window.addEventListener('resize', () => {
+    if (chartData.rpm.length) {
+      drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true,getTargetRpm());
+      drawChart('chartAmps',chartData.amps,'#ff6b00',5);
+      drawChart('chartKv',chartData.kv,'#39ff14',null);
+      drawChart('chartTemp',chartData.temp,'#ffcc00',50);
+    }
+  });
+});
+</script>
+</body>
+</html>
