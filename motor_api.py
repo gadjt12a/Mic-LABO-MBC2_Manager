@@ -108,15 +108,7 @@ def handle_motor_api(handler):
             direction    = body.get('direction')
             chassis_ids  = body.get('chassis_ids', [])
             program_ids  = body.get('program_ids', [])
-            pre_treatment = body.get('pre_treatment', '')
             notes        = body.get('notes', '')
-
-            # Combine pre_treatment and notes into the notes field
-            combined_notes = ''
-            if pre_treatment:
-                combined_notes = f'Pre-treatment: {pre_treatment}'
-            if notes:
-                combined_notes = (combined_notes + '\n' + notes).strip() if combined_notes else notes
 
             if not model_code or not direction:
                 _send_error(handler, 'model_code and direction are required')
@@ -129,7 +121,7 @@ def handle_motor_api(handler):
                 model_code=model_code,
                 direction=direction,
                 chassis_ids=chassis_ids if chassis_ids else None,
-                notes=combined_notes or None
+                notes=notes or None
             )
 
             if program_ids:
@@ -342,6 +334,64 @@ def handle_motor_api(handler):
                 'efficiency': score
             })
             return
+
+    # ── Session data rows (for compare chart) ────────────────────
+    if method == 'GET' and path.startswith('/api/motors/session/') and path.endswith('/data'):
+        parts = path.split('/')
+        if len(parts) == 6:
+            try:
+                import csv as csv_mod
+                from datetime import datetime
+                from pathlib import Path
+                session_id = int(parts[4])
+                with db.get_connection() as conn:
+                    sess = conn.execute(
+                        'SELECT * FROM sessions WHERE session_id = ?', (session_id,)
+                    ).fetchone()
+                if not sess:
+                    _send_error(handler, 'Session not found', 404)
+                    return
+                sess = dict(sess)
+                sess_date = sess.get('session_date', '')[:16]
+
+                # Find matching CSV by timestamp proximity
+                sessions_dir = Path(handler.server.data_dir) / 'sessions'
+                best_file = None
+                best_diff = float('inf')
+                if sessions_dir.exists():
+                    for csv_file in sessions_dir.glob('*.csv'):
+                        try:
+                            mtime = datetime.fromtimestamp(csv_file.stat().st_mtime)
+                            if sess_date:
+                                sd = datetime.fromisoformat(sess_date.replace(' ', 'T'))
+                                diff = abs((mtime - sd).total_seconds())
+                                if diff < best_diff:
+                                    best_diff = diff
+                                    best_file = csv_file
+                        except Exception:
+                            continue
+
+                rows = []
+                if best_file and best_diff < 300:
+                    try:
+                        with open(best_file, 'r') as f:
+                            reader = csv_mod.DictReader(f)
+                            rows = [{'rpm': int(r.get('rpm', 0) or 0),
+                                    'amps': float(r.get('amps', 0) or 0),
+                                    'volts': float(r.get('volts', 0) or 0),
+                                    'kv': int(r.get('kv', 0) or 0),
+                                    'temp': int(r.get('temp', 0) or 0),
+                                    'step': int(r.get('step', 0) or 0),
+                                    'elapsed': int(r.get('elapsed_ms', 0) or 0)} for r in reader]
+                    except Exception:
+                        pass
+
+                _send_json(handler, {'session_id': session_id, 'rows': rows,
+                           'peak_rpm': sess.get('peak_rpm'),
+                           'session_date': sess.get('session_date')})
+            except Exception as e:
+                _send_error(handler, str(e), 500)
+        return
 
     # ── 404 fallthrough ──────────────────────────────────────────
     _send_error(handler, f'Unknown motor API route: {path}', 404)

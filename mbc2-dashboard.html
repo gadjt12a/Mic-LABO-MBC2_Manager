@@ -2599,6 +2599,8 @@ function mrSwitchTab(tab) {
   });
   document.getElementById('mrPanelRegister').style.display = tab === 'register' ? 'block' : 'none';
   document.getElementById('mrPanelRegistry').style.display = tab === 'registry' ? 'block' : 'none';
+  // Always close detail panel when switching tabs
+  mrCloseDetail();
   if (tab === 'registry') mrLoadMotors();
 }
 
