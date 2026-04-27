@@ -211,14 +211,19 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
                 try:
                     with db.get_connection() as conn:
                         motor_id = motor['motor_id']
+                        # Enable foreign keys and delete in correct order
+                        conn.execute('PRAGMA foreign_keys = OFF')
+                        conn.execute('DELETE FROM motor_breakin_log WHERE motor_id = ?', (motor_id,))
                         conn.execute('DELETE FROM benchmarks WHERE motor_id = ?', (motor_id,))
                         conn.execute('DELETE FROM sessions WHERE motor_id = ?', (motor_id,))
                         conn.execute('DELETE FROM motor_chassis_assignments WHERE motor_id = ?', (motor_id,))
                         conn.execute('DELETE FROM motors WHERE motor_id = ?', (motor_id,))
+                        conn.execute('PRAGMA foreign_keys = ON')
                         conn.commit()
                     self._json({'ok': True, 'deleted': identifier})
                     print(f'[MBC2] Motor deleted: {identifier}')
                 except Exception as e:
+                    print(f'[MBC2] Delete error: {e}')
                     self._json({'error': str(e)}, 500)
             else:
                 self._json({'error': 'Motor not found'}, 404)

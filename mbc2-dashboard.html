@@ -1476,8 +1476,8 @@ function stopRecording() {
       finaliseSession();
     }
   }
-  // Reload motor registry to update session counts
-  if (typeof loadRegisteredMotors === 'function') loadRegisteredMotors();
+  // Refresh all data after session ends
+  if (typeof refreshAll === 'function') refreshAll();
 }
 
 async function autoSaveSession() {
@@ -1796,6 +1796,7 @@ function saveProfileEdit(profileId) {
   profile.notes   = document.getElementById('ep_notes').value.trim();
   saveLibrary(); renderDrawer(); buildProgSelector();
   closeEditor(); showToast('Profile saved');
+  if (typeof refreshAll === 'function') refreshAll();
 }
 
 function deleteProfile(profileId) {
@@ -1908,6 +1909,7 @@ function saveProgramEdit(profileId, programId) {
 
   saveLibrary(); renderDrawer(); buildProgSelector();
   closeEditor(); showToast('Program saved');
+  if (typeof refreshAll === 'function') refreshAll();
 }
 
 function deleteProgram(profileId, programId) {
@@ -2720,6 +2722,17 @@ const BASELINE_PROGRAM = {
   ]
 };
 
+// Central refresh — call after any data change
+async function refreshAll() {
+  await Promise.all([
+    loadRegisteredMotors(),
+    loadLibrary().catch(() => {}),
+    loadServerSessions().catch(() => {}),
+  ]);
+  buildProgSelector();
+  renderDrawer();
+}
+
 async function loadRegisteredMotors() {
   try {
     const data = await apiGet('/api/motors/all');
@@ -2897,10 +2910,17 @@ async function mrDeleteMotor(motorId, identifier) {
     const data = res.ok ? await res.json() : null;
     if (data?.ok) {
       showToast(identifier + ' deleted');
-      mrCloseDetail();
-      loadRegisteredMotors();
+      // Close detail panel immediately
+      const detailEl = document.getElementById('mrMotorDetail');
+      if (detailEl) detailEl.style.display = 'none';
+      // Remove from local MR.motors array immediately so re-render is instant
+      MR.motors = MR.motors.filter(m => m.motor_id !== motorId);
+      mrRenderRegistry();
+      // Then do full refresh in background
+      await refreshAll();
     } else {
-      showToast('Delete failed', true);
+      const errData = res.ok ? null : await res.json().catch(() => ({}));
+      showToast('Delete failed: ' + (errData?.error || res.status), true);
     }
   } catch(e) {
     showToast('Delete failed: ' + e.message, true);
@@ -2914,8 +2934,10 @@ async function mrDeleteSession(sessionId, motorId) {
     const data = res.ok ? await res.json() : null;
     if (data?.ok) {
       showToast('Session deleted');
-      mrShowMotorDetail(motorId); // refresh the detail panel
-      loadRegisteredMotors(); // update session count in list
+      // Refresh detail panel and registry immediately
+      await mrLoadMotors();
+      mrShowMotorDetail(motorId);
+      loadServerSessions();
     } else {
       showToast('Delete failed', true);
     }
