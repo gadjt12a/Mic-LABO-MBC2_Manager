@@ -79,6 +79,64 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
             self._json({'ok': True})
             return
 
+        # ── Session data rows (for compare chart) ────────────
+        if path.startswith('/api/motors/session/') and path.endswith('/data'):
+            parts = path.split('/')
+            if len(parts) == 6:
+                try:
+                    import csv as csv_mod
+                    from datetime import datetime
+                    session_id = int(parts[4])
+                    with db.get_connection() as conn:
+                        sess = conn.execute(
+                            'SELECT * FROM sessions WHERE session_id = ?', (session_id,)
+                        ).fetchone()
+                    if not sess:
+                        self._json({'error': 'Session not found'}, 404)
+                        return
+                    sess = dict(sess)
+                    sess_date = sess.get('session_date', '')[:16]  # YYYY-MM-DD HH:MM
+
+                    # Find best matching CSV by timestamp proximity
+                    sessions_dir = DATA_DIR / 'sessions'
+                    best_file = None
+                    best_diff = float('inf')
+                    for csv_file in sessions_dir.glob('*.csv'):
+                        try:
+                            mtime = datetime.fromtimestamp(csv_file.stat().st_mtime)
+                            # Try parsing session_date
+                            if sess_date:
+                                sd = datetime.fromisoformat(sess_date)
+                                diff = abs((mtime - sd).total_seconds())
+                                if diff < best_diff:
+                                    best_diff = diff
+                                    best_file = csv_file
+                        except Exception:
+                            continue
+
+                    rows = []
+                    if best_file and best_diff < 300:  # within 5 minutes
+                        try:
+                            with open(best_file, 'r') as f:
+                                reader = csv_mod.DictReader(f)
+                                rows = [{'rpm': int(r.get('rpm', 0) or 0),
+                                        'amps': float(r.get('amps', 0) or 0),
+                                        'volts': float(r.get('volts', 0) or 0),
+                                        'kv': int(r.get('kv', 0) or 0),
+                                        'temp': int(r.get('temp', 0) or 0),
+                                        'step': int(r.get('step', 0) or 0),
+                                        'elapsed': int(r.get('elapsed_ms', 0) or 0)} for r in reader]
+                        except Exception:
+                            pass
+
+                    self._json({'session_id': session_id, 'rows': rows,
+                               'peak_rpm': sess.get('peak_rpm'),
+                               'session_date': sess.get('session_date'),
+                               'csv_matched': best_file.name if best_file else None})
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+            return
+
         # ── Shutdown ──────────────────────────────────────────
         if path == '/api/shutdown':
             self._json({'ok': True, 'message': 'Server shutting down'})
