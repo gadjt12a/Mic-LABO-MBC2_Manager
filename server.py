@@ -9,6 +9,7 @@ MBC2 Dashboard Server v2.0
 """
 
 import http.server
+import time
 import socketserver
 import webbrowser
 import threading
@@ -51,7 +52,7 @@ _last_ping = time.time()
 
 def _watchdog(httpd):
     global _last_ping
-    time.sleep(15)  # grace period on startup
+    time.sleep(30)  # grace period on startup
     while True:
         time.sleep(2)
         if time.time() - _last_ping > KEEPALIVE_TIMEOUT:
@@ -85,6 +86,13 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
             global _last_ping
             _last_ping = time.time()
             self._json({'ok': True})
+            return
+
+        # ── Shutdown ──────────────────────────────────────────
+        if path == '/api/shutdown':
+            self._json({'ok': True, 'message': 'Server shutting down'})
+            print('\n[MBC2] Shutdown requested from browser.')
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
             return
 
         # ── Firmware proxy ────────────────────────────────────
@@ -180,7 +188,7 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
         if path == '/api/sessions':
             length = int(self.headers.get('Content-Length', 0))
             body = json.loads(self.rfile.read(length))
-            fname = body.get('filename', f'session_{int(time.time())}.csv')
+            fname = body.get('filename', f'session_{int(time.time())}.csv')  # time imported above
             csv_data = body.get('data', '')
             sessions_dir = DATA_DIR / 'sessions'
             sessions_dir.mkdir(exist_ok=True)
