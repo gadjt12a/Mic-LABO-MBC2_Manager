@@ -2503,6 +2503,9 @@ function mrResetForm() {
   mrRenderSubprogs();
   mrRenderSeq();
   mrUpdatePreview();
+  // Reset register button text (may still say 'Registering...' after success)
+  const regBtn = document.getElementById('mrRegBtn');
+  if (regBtn) regBtn.textContent = 'Register motor';
   // Close detail panel if open
   mrCloseDetail();
   // Hide existing motors hint
