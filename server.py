@@ -5,7 +5,7 @@ MBC2 Dashboard Server v2.0
 - Handles program library (programs.json)
 - Handles motor registry (SQLite via db_manager)
 - Auto-opens browser on start
-- Shuts down when browser closes (keepalive watchdog)
+- Shuts down via Stop Server button in app or Ctrl+C
 """
 
 import http.server
@@ -27,7 +27,6 @@ PROGRAMS_JSON  = DATA_DIR / 'programs.json'
 SEED_JSON      = DATA_DIR / 'seed_programs.json'
 
 PORT               = 8766
-KEEPALIVE_TIMEOUT  = 10   # seconds — shutdown if no ping received
 
 # ── Ensure folders exist ─────────────────────────────────────
 DATA_DIR.mkdir(exist_ok=True)
@@ -46,19 +45,6 @@ try:
         print(f'[MBC2] Seeded {count} break-in profiles from seed_programs.json')
 except Exception as e:
     print(f'[MBC2] Seed warning: {e}')
-
-# ── Keepalive watchdog ────────────────────────────────────────
-_last_ping = time.time()
-
-def _watchdog(httpd):
-    global _last_ping
-    time.sleep(30)  # grace period on startup
-    while True:
-        time.sleep(2)
-        if time.time() - _last_ping > KEEPALIVE_TIMEOUT:
-            print('\n[MBC2] Browser closed — shutting down.')
-            httpd.shutdown()
-            break
 
 # ── Request handler ───────────────────────────────────────────
 class MBC2Handler(http.server.BaseHTTPRequestHandler):
@@ -83,8 +69,6 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
 
         # ── Keepalive ping ────────────────────────────────────
         if path == '/api/ping':
-            global _last_ping
-            _last_ping = time.time()
             self._json({'ok': True})
             return
 
@@ -250,7 +234,6 @@ if __name__ == '__main__':
         print(f'[MBC2] Server running at {url}')
         print(f'[MBC2] Press Ctrl+C to stop manually')
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
-        threading.Thread(target=_watchdog, args=(httpd,), daemon=True).start()
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
