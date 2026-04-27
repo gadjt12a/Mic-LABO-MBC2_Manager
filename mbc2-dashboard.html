@@ -652,7 +652,7 @@
 <!-- BENCHMARK BANNER -->
 <div class="benchmark-banner" id="benchmarkBanner">
   ⚡ BENCHMARK MODE — 1.0→3.0V · R Direction · 3 min (5 steps)
-  <span id="bmCountdown" class="bm-countdown">2:00</span>
+  <span id="bmCountdown" class="bm-countdown">3:00</span>
 </div>
 
 <!-- DASHBOARD -->
@@ -1136,6 +1136,29 @@ function parseLine(line) {
       document.getElementById('sessionCount').textContent = 'Waiting...';
       return;
     }
+
+    // Program finished — MBC2 returned to MANU after recording started
+    // Use a debounce — only auto-stop after 5 consecutive MANU frames (~5 seconds)
+    // This prevents false triggers during cooldown transitions between steps
+    if (isManual && sessionData.length > 0) {
+      window._manuFrames = (window._manuFrames || 0) + 1;
+      if (window._manuFrames >= 5) {
+        window._manuFrames = 0;
+        recording = false;
+        document.getElementById('btnRecord').disabled = !port;
+        document.getElementById('btnStop').disabled = true;
+        document.getElementById('runIndicator').style.display = 'none';
+        setStatus(port ? 'connected' : '', port ? 'Connected' : 'Disconnected');
+        document.getElementById('btnSave').disabled = false;
+        showToast('Program complete — session auto-saved (' + sessionData.length + ' rows)');
+        autoSaveSession();
+        if (sessionDbId && sessionMotorId) finaliseSession();
+        if (typeof loadRegisteredMotors === 'function') loadRegisteredMotors();
+      }
+      return;
+    }
+    // Reset MANU frame counter when program is running
+    window._manuFrames = 0;
 
     // If we were waiting and program just started, reset session timer
     if (!isManual && sessionData.length === 0) {
@@ -3267,9 +3290,11 @@ function showBenchmarkResult({ peakRpm, avgRpm, peakCurrentMa, avgCurrentMa, pea
     return { v, label: stepLabels[i], kv: avgKv, amps: avgA };
   }).filter(Boolean);
 
-  // Log kV curve to console for now, toast the key result
+  // Show kV curve summary
   console.table(kvByStep);
-  showToast(`Peak: ${peakRpm.toLocaleString()} RPM | ${avgAmps.toFixed(3)}A @ 3V | ${rpmPerWatt.toLocaleString()} RPM/W | Rating: ${rating}`);
+  const kvSummary = kvByStep.map(s => `${s.label}: ${s.kv.toLocaleString()} kV`).join(' | ');
+  showToast(`Rating: ${rating} | Peak: ${peakRpm.toLocaleString()} RPM | ${avgAmps.toFixed(3)}A | ${rpmPerWatt.toLocaleString()} RPM/W`);
+  console.log('[MBC2] kV Curve:', kvSummary);
 }
 
 // Benchmark data collection is handled inside parseLine directly
@@ -3292,8 +3317,9 @@ async function requestWakeLock() {
     // Re-acquire if released (e.g. tab visibility change)
     wakeLock.addEventListener('release', () => {
       console.log('[MBC2] Wake Lock released');
-      if (port) {
-        // Still connected — try to re-acquire
+      wakeLock = null;
+      // Only re-acquire if still connected AND page is visible
+      if (port && document.visibilityState === 'visible') {
         setTimeout(requestWakeLock, 1000);
       }
     });
@@ -3313,7 +3339,7 @@ function releaseWakeLock() {
 // Re-acquire wake lock when tab becomes visible again
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && port && !wakeLock) {
-    requestWakeLock();
+    setTimeout(requestWakeLock, 500);
   }
 });
 
