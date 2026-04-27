@@ -2648,16 +2648,19 @@ function mrRenderRegistry() {
     wrap.innerHTML = '<p class="mr-empty">No motors registered yet.</p>';
     return;
   }
-  // Build lookup from rosterData for rating/efficiency
+  // Build lookup from rosterData for rating/efficiency — key by identifier (always present)
   const rosterLookup = {};
   if (typeof rosterData !== 'undefined') {
-    rosterData.forEach(r => { rosterLookup[r.motor_id] = r; });
+    rosterData.forEach(r => {
+      if (r.identifier) rosterLookup[r.identifier] = r;
+      if (r.motor_id)   rosterLookup[r.motor_id]   = r;
+    });
   }
 
   let h = '';
   MR.motors.forEach(m => {
     const statusClass = m.status === 'Active' ? 'active' : 'retired';
-    const rd = rosterLookup[m.motor_id] || {};
+    const rd = rosterLookup[m.identifier] || rosterLookup[m.motor_id] || {};
     const rating = rd.rating && rd.rating !== 'N/A' ? rd.rating : null;
     const eff = rd.efficiency_score ? Math.round(rd.efficiency_score).toLocaleString() + ' RPM/W' : null;
     const ratingCls = rating ? `rating-badge ${rating}` : 'rating-badge NA';
@@ -3149,7 +3152,14 @@ let rosterSort = { col: 'best_peak_rpm', dir: -1 };
 async function loadRoster() {
   const tbody = document.getElementById('rosterBody');
   if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr>';
-  const data = await apiGet('/api/motors/roster');
+  const res = await fetch(API + '/api/motors/roster');
+  if (!res.ok) {
+    // Roster endpoint not available — fall back, ratings won't show
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:20px;">Failed to load — is server running?</td></tr>';
+    console.warn('[loadRoster] /api/motors/roster returned', res.status, '— update motor_api.py to enable ratings');
+    return;
+  }
+  const data = await res.json();
   if (!data || !data.motors) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:20px;">Failed to load — is server running?</td></tr>';
     return;

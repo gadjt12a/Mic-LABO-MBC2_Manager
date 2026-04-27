@@ -75,6 +75,12 @@ def handle_motor_api(handler):
         _send_json(handler, {'motors': motors, 'count': len(motors)})
         return
 
+    # ── GET /api/motors/roster ───────────────────────────────────
+    if method == 'GET' and path == '/api/motors/roster':
+        roster = db.get_motor_roster()
+        _send_json(handler, {'motors': roster, 'count': len(roster)})
+        return
+
     # ── GET /api/motors/<identifier> ────────────────────────────
     # e.g. /api/motors/SD-R-01
     if method == 'GET' and path.startswith('/api/motors/'):
@@ -292,12 +298,6 @@ def handle_motor_api(handler):
                 _send_error(handler, 'Session ID must be integer')
             return
 
-
-    # ── GET /api/motors/roster ───────────────────────────────────
-    if method == 'GET' and path == '/api/motors/roster':
-        roster = db.get_motor_roster()
-        _send_json(handler, {'motors': roster, 'count': len(roster)})
-        return
 
     # ── GET /api/motors/<id>/trend ───────────────────────────────
     if method == 'GET' and path.startswith('/api/motors/') and path.endswith('/trend'):
