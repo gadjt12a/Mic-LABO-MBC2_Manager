@@ -2333,8 +2333,9 @@ async function mrSubmitRegistration() {
     const key = `${MR.sel.motor.code}-${MR.sel.dir}`;
     MR.counters[key] = (MR.counters[key] || 0) + 1;
 
-    // Reload registry
+    // Reload registry and right panel dropdown
     await mrLoadMotors();
+    await loadRegisteredMotors();
 
     // Reset form
     mrResetForm();
