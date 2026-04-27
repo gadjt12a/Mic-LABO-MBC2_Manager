@@ -418,6 +418,19 @@
 .mr-prev-id { font-size:22px; font-weight:700; font-family:var(--mono); color:var(--accent); letter-spacing:0.08em; }
 .mr-prev-id.empty { color:var(--text3); font-size:13px; font-weight:400; }
 .mr-prev-meta { font-size:11px; color:var(--text2); line-height:1.8; }
+.mr-prev-stats { display:flex; gap:18px; margin-top:10px; flex-wrap:wrap; }
+.mr-prev-stat { display:flex; flex-direction:column; gap:3px; }
+.mr-prev-stat-lbl { font-size:9px; letter-spacing:1.5px; color:var(--text3); text-transform:uppercase; font-family:var(--display); }
+.mr-prev-stat-val { font-size:13px; font-weight:700; font-family:var(--mono); color:var(--text); }
+.mr-prev-stat-val.dim { color:var(--text3); font-weight:400; }
+.mr-prev-stat-val.rating-A { color:var(--accent3); }
+.mr-prev-stat-val.rating-B { color:var(--accent); }
+.mr-prev-stat-val.rating-C { color:var(--warn); }
+.mr-prev-stat-val.rating-D { color:var(--danger); }
+.mr-prev-sbars { display:flex; gap:2px; align-items:center; margin-top:2px; }
+.mr-prev-sbar { width:8px; height:8px; border-radius:1px; background:var(--border2); }
+.mr-prev-sbar.on { background:var(--accent); }
+.mr-prev-sbar.on.torque { background:var(--accent2); }
 .mr-reg-btn { width:100%; padding:10px; border:1px solid var(--border); border-radius:3px; background:var(--bg2); color:var(--text3); font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all 0.15s; }
 .mr-reg-btn.ready { border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,0.06); }
 .mr-reg-btn:disabled { opacity:0.25; cursor:not-allowed; }
@@ -433,6 +446,8 @@
 .mr-mdot.retired { background:var(--text3); }
 .mr-mid { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--accent); min-width:96px; letter-spacing:0.05em; }
 .mr-mmod { font-size:12px; color:var(--text2); flex:1; }
+.mr-mrating { display:flex; align-items:center; gap:8px; min-width:160px; }
+.mr-meff { font-size:10px; font-family:var(--mono); color:var(--text3); }
 .mr-msessions { font-size:11px; color:var(--text3); min-width:66px; }
 .mr-mbest { font-size:11px; font-family:var(--mono); color:var(--accent3); min-width:86px; }
 .mr-mdate { font-size:11px; color:var(--text3); }
@@ -2298,6 +2313,8 @@ async function mrLoadMotors() {
 
     mrRenderRegistry();
     mrUpdatePreview(); // refresh preview with correct next number
+    // Sync rosterData so registry rows can show rating/efficiency
+    if (typeof loadRoster === 'function') loadRoster();
   } catch (e) {
     console.warn('[MR] Could not load motors:', e.message);
   }
@@ -2372,6 +2389,55 @@ function mrUpdatePreview() {
     btn.disabled = false;
     btn.className = 'mr-reg-btn ready';
 
+    // Build stats row
+    const statsEl = document.getElementById('mrPreviewStats');
+    if (statsEl) {
+      const m = MR.sel.motor;
+
+      // Speed star bars (cyan)
+      const spdBars = Array.from({length:4}, (_,i) =>
+        `<div class="mr-prev-sbar${i < m.speed ? ' on' : ''}"></div>`).join('');
+      // Torque star bars (orange accent2)
+      const tqBars = Array.from({length:4}, (_,i) =>
+        `<div class="mr-prev-sbar${i < m.torque ? ' on torque' : ''}"></div>`).join('');
+
+      // Look up best benchmark result for this motor type from rosterData
+      const key = `${m.code}-${MR.sel.dir}`;
+      const sameType = (typeof rosterData !== 'undefined' ? rosterData : [])
+        .filter(r => r.identifier && r.identifier.startsWith(key + '-'));
+      const bestRated = sameType.filter(r => r.rating && r.rating !== 'N/A')
+        .sort((a,b) => (b.efficiency_score||0) - (a.efficiency_score||0))[0];
+
+      const rating  = bestRated?.rating  || null;
+      const kv      = bestRated?.efficiency_score ? Math.round(bestRated.efficiency_score).toLocaleString() : null;
+      const peakRpm = bestRated?.best_peak_rpm ? bestRated.best_peak_rpm.toLocaleString() : null;
+
+      const ratingCls = rating ? `rating-${rating}` : 'dim';
+
+      statsEl.innerHTML = `
+        <div class="mr-prev-stat">
+          <div class="mr-prev-stat-lbl">Speed</div>
+          <div class="mr-prev-sbars">${spdBars}</div>
+        </div>
+        <div class="mr-prev-stat">
+          <div class="mr-prev-stat-lbl">Torque</div>
+          <div class="mr-prev-sbars">${tqBars}</div>
+        </div>
+        <div class="mr-prev-stat">
+          <div class="mr-prev-stat-lbl">Best RPM</div>
+          <div class="mr-prev-stat-val ${peakRpm ? '' : 'dim'}">${peakRpm || '—'}</div>
+        </div>
+        <div class="mr-prev-stat">
+          <div class="mr-prev-stat-lbl">Efficiency</div>
+          <div class="mr-prev-stat-val ${kv ? '' : 'dim'}">${kv ? kv + ' RPM/W' : '—'}</div>
+        </div>
+        <div class="mr-prev-stat">
+          <div class="mr-prev-stat-lbl">Rating</div>
+          <div class="mr-prev-stat-val ${ratingCls}">${rating || '—'}</div>
+        </div>`;
+      statsEl.style.display = 'flex';
+    }
+
     // Show existing motors of same type
     const key = `${MR.sel.motor.code}-${MR.sel.dir}`;
     const existing = registeredMotors.filter(m =>
@@ -2394,6 +2460,8 @@ function mrUpdatePreview() {
     meta.textContent = '';
     btn.disabled = true;
     btn.className = 'mr-reg-btn';
+    const statsEl = document.getElementById('mrPreviewStats');
+    if (statsEl) statsEl.style.display = 'none';
     const existingEl = document.getElementById('mrExistingMotors');
     if (existingEl) existingEl.style.display = 'none';
   }
@@ -2580,13 +2648,27 @@ function mrRenderRegistry() {
     wrap.innerHTML = '<p class="mr-empty">No motors registered yet.</p>';
     return;
   }
+  // Build lookup from rosterData for rating/efficiency
+  const rosterLookup = {};
+  if (typeof rosterData !== 'undefined') {
+    rosterData.forEach(r => { rosterLookup[r.motor_id] = r; });
+  }
+
   let h = '';
   MR.motors.forEach(m => {
     const statusClass = m.status === 'Active' ? 'active' : 'retired';
+    const rd = rosterLookup[m.motor_id] || {};
+    const rating = rd.rating && rd.rating !== 'N/A' ? rd.rating : null;
+    const eff = rd.efficiency_score ? Math.round(rd.efficiency_score).toLocaleString() + ' RPM/W' : null;
+    const ratingCls = rating ? `rating-badge ${rating}` : 'rating-badge NA';
     h += `<div class="mr-mrow" onclick="mrShowMotorDetail(${m.motor_id})">
       <div class="mr-mdot ${statusClass}"></div>
       <div class="mr-mid">${m.identifier}</div>
       <div class="mr-mmod">${m.model_name} &middot; ${m.breakin_direction === 'R' ? 'Reverse' : 'Forward'}</div>
+      <div class="mr-mrating">
+        <span class="${ratingCls}">${rating || '—'}</span>
+        ${eff ? \`<span class="mr-meff">\${eff}</span>\` : ''}
+      </div>
       <div class="mr-msessions">${m.total_sessions || 0} sessions</div>
       <div class="mr-mbest">${m.best_peak_rpm ? m.best_peak_rpm.toLocaleString() + ' RPM' : '—'}</div>
       <div class="mr-mdate">${m.date_registered}</div>
@@ -2680,9 +2762,12 @@ function initMotorRegistry() {
       <textarea class="mr-notes" id="mrNotes" rows="2" placeholder="e.g. Water treatment, batch purchase date..."></textarea>
 
       <p class="mr-sec-lbl" style="margin-top:1.5rem">Motor identifier</p>
-      <div class="mr-preview-box">
-        <div id="mrPreviewId" class="mr-prev-id empty">Select motor + direction</div>
-        <div id="mrPreviewMeta" class="mr-prev-meta"></div>
+      <div class="mr-preview-box" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div id="mrPreviewId" class="mr-prev-id empty">Select motor + direction</div>
+          <div id="mrPreviewMeta" class="mr-prev-meta"></div>
+        </div>
+        <div id="mrPreviewStats" class="mr-prev-stats" style="display:none"></div>
       </div>
 
       <button class="mr-reg-btn" id="mrRegBtn" disabled onclick="mrSubmitRegistration()">Register motor</button>
@@ -3071,6 +3156,8 @@ async function loadRoster() {
   }
   rosterData = data.motors;
   filterRoster();
+  // Re-render motor registry list so rating/efficiency badges update
+  if (typeof mrRenderRegistry === 'function') mrRenderRegistry();
 }
 
 function filterRoster() {
