@@ -1118,13 +1118,23 @@ function parseLine(line) {
 
   // Collect benchmark data if benchmark mode is active
   if (benchmarkMode) {
-    benchmarkData.push({
-      rpm: state.rpm, amps: state.amps,
-      volts: state.volts, temp: state.temp,
-      step: state.step,
-      kv: state.kv,
-      elapsed: Date.now() - benchmarkStart
-    });
+    const isManuState = state.progName === 'MANU' || state.progName === '—' || state.volts === 0;
+
+    // Waiting for program to start on device
+    if (benchmarkWaiting && !isManuState) {
+      startBenchmarkCountdown();
+    }
+
+    // Only collect data once timer has started
+    if (!benchmarkWaiting) {
+      benchmarkData.push({
+        rpm: state.rpm, amps: state.amps,
+        volts: state.volts, temp: state.temp,
+        step: state.step,
+        kv: state.kv,
+        elapsed: Date.now() - benchmarkStart
+      });
+    }
   }
 
   if (recording) {
@@ -3172,28 +3182,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // startRecording benchmark override consolidated below
 
+let benchmarkWaiting = false; // true = waiting for program to start on device
+
 function startBenchmarkSession() {
   if (!port) { showToast('Connect MBC2 first', true); return; }
   benchmarkData = [];
-  benchmarkStart = Date.now();
+  benchmarkStart = 0; // will be set when program detected
   benchmarkMode = true;
+  benchmarkWaiting = true;
 
   document.getElementById('benchmarkBanner').classList.add('active');
+  document.getElementById('bmCountdown').textContent = 'Waiting...';
   document.getElementById('btnRecord').disabled = true;
   document.getElementById('btnStop').disabled = false;
   document.getElementById('runIndicator').style.display = 'inline';
   setStatus('running', 'Benchmark');
-
-  // Start countdown
-  updateBenchmarkCountdown();
-  benchmarkTimer = setInterval(() => {
-    const elapsed = (Date.now() - benchmarkStart) / 1000;
-    if (elapsed >= BENCHMARK_DURATION) {
-      stopBenchmarkSession();
-    } else {
-      updateBenchmarkCountdown();
-    }
-  }, 500);
 
   // Start DB session
   if (activeMotorId) {
@@ -3205,7 +3208,21 @@ function startBenchmarkSession() {
     });
   }
 
-  showToast('Benchmark started — 1.0V→3.0V ramp, 3 min total');
+  showToast('Ready — start BASELINE program on MBC2');
+}
+
+function startBenchmarkCountdown() {
+  benchmarkStart = Date.now();
+  benchmarkWaiting = false;
+  showToast('Benchmark running — 3 min');
+  benchmarkTimer = setInterval(() => {
+    const elapsed = (Date.now() - benchmarkStart) / 1000;
+    if (elapsed >= BENCHMARK_DURATION) {
+      stopBenchmarkSession();
+    } else {
+      updateBenchmarkCountdown();
+    }
+  }, 500);
 }
 
 function updateBenchmarkCountdown() {
@@ -3219,6 +3236,7 @@ function updateBenchmarkCountdown() {
 function stopBenchmarkSession() {
   clearInterval(benchmarkTimer);
   benchmarkMode = false;
+  benchmarkWaiting = false;
   document.getElementById('benchmarkBanner').classList.remove('active');
 
   // Calculate benchmark stats from collected data
