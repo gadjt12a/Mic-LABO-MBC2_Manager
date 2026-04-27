@@ -145,8 +145,8 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
                 content = fpath.read_bytes()
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/csv')
-                self.send_header('Content-Disposition', f'attachment; filename="{fname}"')
                 self.send_header('Content-Length', len(content))
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(content)
             else:
@@ -194,6 +194,40 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
             sessions_dir.mkdir(exist_ok=True)
             (sessions_dir / fname).write_text(csv_data)
             self._json({'ok': True, 'filename': fname})
+            return
+
+        self._json({'error': f'Unknown route: {path}'}, 404)
+
+    def do_DELETE(self):
+        path = self.path.split('?')[0]
+
+        # ── Delete session CSV ────────────────────────────────
+        if path.startswith('/api/sessions/'):
+            fname = path.split('/')[-1]
+            fpath = DATA_DIR / 'sessions' / fname
+            if fpath.exists() and fpath.suffix == '.csv':
+                fpath.unlink()
+                self._json({'ok': True, 'deleted': fname})
+            else:
+                self._json({'error': 'Not found'}, 404)
+            return
+
+        # ── Clear motor DB sessions ───────────────────────────
+        if path.startswith('/api/motors/') and path.endswith('/sessions/clear'):
+            parts = path.split('/')
+            if len(parts) >= 4:
+                identifier = parts[3]
+                motor = db.get_motor_by_identifier(identifier)
+                if motor:
+                    try:
+                        with db.get_connection() as conn:
+                            conn.execute('DELETE FROM sessions WHERE motor_id = ?', (motor['motor_id'],))
+                            conn.commit()
+                        self._json({'ok': True, 'cleared': identifier})
+                    except Exception as e:
+                        self._json({'error': str(e)}, 500)
+                else:
+                    self._json({'error': 'Motor not found'}, 404)
             return
 
         self._json({'error': f'Unknown route: {path}'}, 404)

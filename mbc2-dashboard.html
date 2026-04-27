@@ -943,6 +943,13 @@ async function apiGet(path) {
   catch(e) { return null; }
 }
 
+async function apiDelete(path) {
+  try {
+    const r = await fetch(API + path, { method: 'DELETE' });
+    return r.ok ? await r.json() : null;
+  } catch(e) { return null; }
+}
+
 async function apiPost(path, data) {
   try {
     const r = await fetch(API + path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
@@ -1491,7 +1498,17 @@ function renderSessionList() {
   `).join('');
 }
 
-function deleteSession(name) { delete allSessions[name]; renderSessionList(); }
+async function deleteSession(name) {
+  if (!confirm('Delete session: ' + name + '?')) return;
+  delete allSessions[name];
+  // Also delete from server
+  const filename = name.replace(/[^a-z0-9_-]/gi,'_') + '.csv';
+  try {
+    await fetch(API + '/api/sessions/' + encodeURIComponent(filename), { method: 'DELETE' });
+  } catch(e) {}
+  renderSessionList();
+  showToast('Session deleted: ' + name);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // PROGRAM LIBRARY
@@ -3043,10 +3060,24 @@ async function showMotorDetail(identifier) {
 
     <div style="padding:0 16px 16px;display:flex;gap:8px;">
       <button class="btn primary" onclick="setMotorFromRoster(${motorData.motor_id}, '${identifier}');document.getElementById('motorDetailModal').classList.remove('open')">▶ Set Active</button>
+      <button class="btn danger" onclick="clearMotorSessions('${identifier}')">Clear Sessions</button>
       <button class="btn danger" onclick="retireMotor('${identifier}')">Retire Motor</button>
       <button class="btn" onclick="document.getElementById('motorDetailModal').classList.remove('open')">Close</button>
     </div>
   `;
+}
+
+async function clearMotorSessions(identifier) {
+  if (!confirm('Clear ALL session history for ' + identifier + '?\nThis cannot be undone.')) return;
+  const res = await fetch(API + '/api/motors/' + identifier + '/sessions/clear', { method: 'DELETE' });
+  const data = res.ok ? await res.json() : null;
+  if (data?.ok) {
+    showToast(identifier + ' sessions cleared');
+    document.getElementById('motorDetailModal').classList.remove('open');
+    loadRoster();
+  } else {
+    showToast('Failed to clear sessions', true);
+  }
 }
 
 async function retireMotor(identifier) {
@@ -3257,17 +3288,26 @@ document.addEventListener('visibilitychange', () => {
 // LOAD SESSIONS FROM SERVER
 // ═══════════════════════════════════════════════════════════════
 async function loadServerSessions() {
+  console.log('[MBC2] Loading sessions from server...');
   const data = await apiGet('/api/sessions');
-  if (!data || !data.sessions || !data.sessions.length) return;
+  if (!data || !data.sessions || !data.sessions.length) {
+    console.log('[MBC2] No sessions found on server');
+    return;
+  }
+  console.log('[MBC2] Found sessions:', data.sessions);
 
   for (const filename of data.sessions) {
     const name = filename.replace('.csv', '');
-    if (allSessions[name]) continue; // already in memory
+    if (allSessions[name]) continue;
     try {
-      const resp = await fetch(API + '/api/sessions/' + filename);
-      if (!resp.ok) continue;
+      const resp = await fetch(API + '/api/sessions/' + encodeURIComponent(filename));
+      if (!resp.ok) {
+        console.log('[MBC2] Failed to fetch session:', filename, resp.status);
+        continue;
+      }
       const text = await resp.text();
       const lines = text.trim().split('\n');
+      if (lines.length < 2) continue;
       const sessionRows = lines.slice(1).map(line => {
         const p = line.split(',');
         return {
@@ -3275,15 +3315,19 @@ async function loadServerSessions() {
           cycle: parseInt(p[3]), step: parseInt(p[4]),
           rpm: parseInt(p[5]), maxRpm: parseInt(p[6]),
           volts: parseFloat(p[7]), amps: parseFloat(p[8]),
-          kv: parseInt(p[9]), temp: parseInt(p[10]), dir: p[11]
+          kv: parseInt(p[9]), temp: parseInt(p[10]), dir: (p[11]||'').trim()
         };
-      }).filter(r => r.time);
+      }).filter(r => r.time && r.time.length > 5);
       if (sessionRows.length) {
         allSessions[name] = { name, captured: new Date().toISOString(), data: sessionRows };
+        console.log('[MBC2] Loaded session:', name, sessionRows.length, 'rows');
       }
-    } catch(e) {}
+    } catch(e) {
+      console.log('[MBC2] Error loading session:', filename, e.message);
+    }
   }
   renderSessionList();
+  console.log('[MBC2] Sessions loaded:', Object.keys(allSessions).length);
 }
 
 let fwLoaded = false;
