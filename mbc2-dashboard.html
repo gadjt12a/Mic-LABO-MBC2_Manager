@@ -2667,7 +2667,7 @@ function mrRenderRegistry() {
       <div class="mr-mmod">${m.model_name} &middot; ${m.breakin_direction === 'R' ? 'Reverse' : 'Forward'}</div>
       <div class="mr-mrating">
         <span class="${ratingCls}">${rating || '—'}</span>
-        ${eff ? \`<span class="mr-meff">\${eff}</span>\` : ''}
+        ${eff ? '<span class="mr-meff">' + eff + '</span>' : ''}
       </div>
       <div class="mr-msessions">${m.total_sessions || 0} sessions</div>
       <div class="mr-mbest">${m.best_peak_rpm ? m.best_peak_rpm.toLocaleString() + ' RPM' : '—'}</div>
