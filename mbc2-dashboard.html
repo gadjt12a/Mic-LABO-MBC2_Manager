@@ -551,6 +551,57 @@
   .bm-stat-value.good { color: var(--accent3); }
   .bm-stat-value.warn { color: var(--warn); }
 
+
+  /* ── FIRMWARE SLIDE-UP ── */
+  .fw-trigger {
+    position: fixed;
+    bottom: 28px;
+    right: 12px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text3);
+    cursor: pointer;
+    z-index: 150;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .fw-trigger:hover { border-color: var(--accent); color: var(--accent); }
+
+  .fw-slideup {
+    position: fixed;
+    bottom: -200px;
+    right: 0;
+    width: 260px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-bottom: none;
+    z-index: 149;
+    transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
+    padding: 12px 14px 14px;
+  }
+  .fw-slideup.open { bottom: 24px; }
+  .fw-slideup-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .fw-slideup-title {
+    font-family: var(--display); font-weight: 700; font-size: 11px;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--text2);
+  }
+  .fw-slideup-close {
+    font-size: 12px; color: var(--text3); cursor: pointer; padding: 2px 6px;
+    border: 1px solid transparent;
+  }
+  .fw-slideup-close:hover { color: var(--danger); border-color: var(--danger); }
+  .fw-upload-note {
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+    font-size: 9px; color: var(--text3); line-height: 1.6;
+  }
 </style>
 </head>
 <body>
@@ -773,18 +824,25 @@
         <span style="color:var(--text3);font-size:11px;">No saved sessions</span>
       </div>
     </div>
-    <div class="prog-section">
-      <div class="chart-label" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Firmware</span>
-        <span id="fwStatus" style="font-size:9px;color:var(--text3);letter-spacing:1px;animation:pulse 2s infinite;">CHECKING...</span>
-      </div>
-      <div id="fwList" style="margin-top:4px;"><span style="color:var(--text3);font-size:11px;">Loading...</span></div>
-      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:9px;color:var(--text3);line-height:1.6;">
-        Upload via:<br><span style="color:var(--accent2);">http://[MBC2-IP]/u</span>
-      </div>
-    </div>
+
   </div>
 </div>
+
+<!-- FIRMWARE SLIDE-UP -->
+<div class="fw-slideup" id="fwSlideup">
+  <div class="fw-slideup-header">
+    <span class="fw-slideup-title">
+      Firmware &nbsp;<span id="fwStatus" style="font-size:9px;color:var(--text3);letter-spacing:1px;">CHECKING...</span>
+    </span>
+    <span class="fw-slideup-close" onclick="toggleFirmware()">✕</span>
+  </div>
+  <div id="fwList"><span style="color:var(--text3);font-size:11px;">Loading...</span></div>
+  <div class="fw-upload-note">
+    Upload via browser:<br>
+    <span style="color:var(--accent2);">http://[MBC2-IP]/u</span>
+  </div>
+</div>
+<button class="fw-trigger" onclick="toggleFirmware()" title="Firmware versions">⬡ Firmware</button>
 
 <!-- FOOTER -->
 <div class="footer">
@@ -1349,12 +1407,18 @@ function stopRecording() {
   }
 }
 
-function autoSaveSession() {
+async function autoSaveSession() {
   const name = document.getElementById('sessionName').value || ('Session_' + new Date().toISOString().slice(0,19).replace(/[T:]/g,'-'));
   allSessions[name] = { name, captured: new Date().toISOString(), data: JSON.parse(JSON.stringify(sessionData)) };
-  // Save to server if available
+  // Save to server — use filename/data fields matching server.py
   const csv = buildCSV(sessionData);
-  apiPost('/api/sessions', { name, csv });
+  const filename = name.replace(/[^a-z0-9_-]/gi,'_') + '.csv';
+  const res = await apiPost('/api/sessions', { filename, data: csv });
+  if (res && res.ok) {
+    showToast('Session saved: ' + filename);
+  } else {
+    showToast('Session saved locally only', false);
+  }
   renderSessionList();
 }
 
@@ -3188,6 +3252,50 @@ document.addEventListener('visibilitychange', () => {
     requestWakeLock();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD SESSIONS FROM SERVER
+// ═══════════════════════════════════════════════════════════════
+async function loadServerSessions() {
+  const data = await apiGet('/api/sessions');
+  if (!data || !data.sessions || !data.sessions.length) return;
+
+  for (const filename of data.sessions) {
+    const name = filename.replace('.csv', '');
+    if (allSessions[name]) continue; // already in memory
+    try {
+      const resp = await fetch(API + '/api/sessions/' + filename);
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      const lines = text.trim().split('\n');
+      const sessionRows = lines.slice(1).map(line => {
+        const p = line.split(',');
+        return {
+          time: p[0], elapsed: parseInt(p[1])||0, progName: p[2],
+          cycle: parseInt(p[3]), step: parseInt(p[4]),
+          rpm: parseInt(p[5]), maxRpm: parseInt(p[6]),
+          volts: parseFloat(p[7]), amps: parseFloat(p[8]),
+          kv: parseInt(p[9]), temp: parseInt(p[10]), dir: p[11]
+        };
+      }).filter(r => r.time);
+      if (sessionRows.length) {
+        allSessions[name] = { name, captured: new Date().toISOString(), data: sessionRows };
+      }
+    } catch(e) {}
+  }
+  renderSessionList();
+}
+
+let fwLoaded = false;
+function toggleFirmware() {
+  const panel = document.getElementById('fwSlideup');
+  panel.classList.toggle('open');
+  // Only fetch once — first time panel is opened
+  if (panel.classList.contains('open') && !fwLoaded) {
+    fwLoaded = true;
+    loadFirmwareList();
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // CLOSE APP — cleanly shuts down the server
