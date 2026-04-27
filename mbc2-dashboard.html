@@ -2311,10 +2311,10 @@ async function mrLoadMotors() {
       }
     });
 
-    mrRenderRegistry();
     mrUpdatePreview(); // refresh preview with correct next number
-    // Sync rosterData so registry rows can show rating/efficiency
-    if (typeof loadRoster === 'function') loadRoster();
+    // Fetch roster data first so registry rows can show rating/efficiency
+    if (typeof loadRoster === 'function') await loadRoster();
+    mrRenderRegistry();
   } catch (e) {
     console.warn('[MR] Could not load motors:', e.message);
   }
@@ -3148,14 +3148,14 @@ let rosterSort = { col: 'best_peak_rpm', dir: -1 };
 
 async function loadRoster() {
   const tbody = document.getElementById('rosterBody');
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Loading...</td></tr>';
   const data = await apiGet('/api/motors/roster');
   if (!data || !data.motors) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:20px;">Failed to load — is server running?</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:20px;">Failed to load — is server running?</td></tr>';
     return;
   }
   rosterData = data.motors;
-  filterRoster();
+  if (tbody) filterRoster();
   // Re-render motor registry list so rating/efficiency badges update
   if (typeof mrRenderRegistry === 'function') mrRenderRegistry();
 }
