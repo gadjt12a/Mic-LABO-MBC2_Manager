@@ -589,6 +589,8 @@
   <button class="btn" onclick="clearDisplay()">✕ Clear</button>
   <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="loadSessionFile(event)">
   <div class="separator"></div>
+  <button class="btn danger" onclick="closeApp()" title="Stop server and close app" style="margin-left:auto;">⏹ Stop Server</button>
+  <div class="separator"></div>
   <!-- Active program indicator -->
   <div class="active-prog-badge" onclick="openDrawer()" id="activeProgramBadge" title="Click to change active program">
     <span style="color:var(--text3);font-size:10px;">PROGRAM:</span>
@@ -746,6 +748,7 @@
       <div class="prog-detail"><span class="prog-detail-label">STEP</span><span class="prog-detail-value" id="progStep">—</span></div>
       <div class="prog-detail"><span class="prog-detail-label">TARGET</span><span class="prog-detail-value" id="progTarget">—</span></div>
       <div class="prog-detail"><span class="prog-detail-label">TIME LEFT</span><span class="prog-detail-value" id="progTime">—</span></div>
+      <div class="prog-detail" id="cooldownRow" style="display:none;"><span class="prog-detail-label" style="color:var(--accent);">COOL DOWN</span><span class="prog-detail-value" style="color:var(--accent);" id="progCool">—</span></div>
     </div>
     <div class="prog-section">
       <div class="chart-label">Steps</div>
@@ -864,6 +867,14 @@ let state = {
   temp:0, maxTemp:0, dir:'—', counter:0, target:0
 };
 
+// Cooldown tracking
+let cooldownActive = false;
+let cooldownStart = 0;
+let cooldownDuration = 0; // seconds
+let cooldownInterval = null;
+let prevStepForCool = 0;
+let prevVolts = 0;
+
 // ═══════════════════════════════════════════════════════════════
 // SERVER API
 // ═══════════════════════════════════════════════════════════════
@@ -923,6 +934,7 @@ async function connectSerial() {
     document.getElementById('btnDisconnect').disabled = false;
     document.getElementById('btnRecord').disabled = false;
     showToast('MBC2 Connected');
+    requestWakeLock();
     startReadLoop();
   } catch(e) {
     console.error('[MBC2] Connection error:', e.name, e.message, e);
@@ -943,6 +955,7 @@ async function disconnectSerial() {
   recording = false;
   if (reader) { try { await reader.cancel(); } catch(e) {} reader = null; }
   if (port)   { try { await port.close();   } catch(e) {} port = null; }
+  releaseWakeLock();
   setStatus('', 'Disconnected');
   document.getElementById('btnConnect').disabled = false;
   document.getElementById('btnDisconnect').disabled = true;
@@ -1112,15 +1125,60 @@ function updateMetrics() {
 }
 
 function updateProgram() {
-  // Show MBC2 stream program name if no active program selected
-  const displayName = activeProgramId ? getActiveProgramDisplay() : state.progName;
   document.getElementById('progCycle').textContent = state.cycle + ' / ' + state.maxCycle;
   document.getElementById('progStep').textContent = state.step;
-  document.getElementById('progTarget').textContent = state.target > 0 ? state.target.toLocaleString() + ' rpm' : '—';
 
-  const tSecs = Math.floor(state.counter / 100);
-  const mm = Math.floor(tSecs/60), ss = tSecs % 60;
-  document.getElementById('progTime').textContent = mm + ':' + String(ss).padStart(2,'0');
+  // Target RPM — use active program's targetRpm if set, else MBC2 stream value
+  const activeProfile = programLibrary.profiles.find(p => p.id === activeProfileId);
+  const activeProg = activeProfile ? activeProfile.programs.find(p => p.id === activeProgramId) : null;
+  const targetRpm = activeProg ? activeProg.targetRpm : state.target;
+  document.getElementById('progTarget').textContent = targetRpm > 0 ? targetRpm.toLocaleString() + ' rpm' : '—';
+
+  // Time Left — use elapsed_ms based on step start time rather than raw counter
+  // The counter from serial is in device ticks, not reliable for display
+  // Use step start tracking instead
+  if (!stepStartTimes) window.stepStartTimes = {};
+  const stepKey = state.cycle + '_' + state.step;
+  if (!stepStartTimes[stepKey] && state.rpm > 0 && state.volts > 0) {
+    stepStartTimes[stepKey] = Date.now();
+  }
+
+  // Get step duration from active program
+  let stepDurationSec = 0;
+  let coolDurationSec = 0;
+  if (activeProg && activeProg.steps && state.step > 0) {
+    const stepDef = activeProg.steps[state.step - 1];
+    if (stepDef) {
+      stepDurationSec = parseTimeString(stepDef.time);
+      coolDurationSec = parseTimeString(stepDef.cool);
+    }
+  }
+
+  // Time left display
+  if (stepStartTimes[stepKey] && stepDurationSec > 0) {
+    const elapsed = (Date.now() - stepStartTimes[stepKey]) / 1000;
+    const remaining = Math.max(0, stepDurationSec - elapsed);
+    const mm = Math.floor(remaining / 60), ss = Math.floor(remaining % 60);
+    document.getElementById('progTime').textContent = mm + ':' + String(ss).padStart(2, '0');
+  } else {
+    document.getElementById('progTime').textContent = '—';
+  }
+
+  // Detect step change to start cooldown timer
+  if (state.step !== prevStepForCool && prevStepForCool !== 0) {
+    // Step changed — previous step just ended, start cooldown if duration > 0
+    if (coolDurationSec > 0 && !cooldownActive) {
+      startCooldown(coolDurationSec);
+    }
+  }
+
+  // Detect motor stopping mid-step (volts→0) as cooldown trigger
+  if (prevVolts > 0 && state.volts === 0 && !cooldownActive && coolDurationSec > 0) {
+    startCooldown(coolDurationSec);
+  }
+
+  prevStepForCool = state.step;
+  prevVolts = state.volts;
 
   for (let i = 1; i <= 5; i++) {
     const el = document.getElementById('step' + i);
@@ -1134,6 +1192,38 @@ function updateProgram() {
   document.getElementById('cycleLabel').textContent = state.cycle + ' / ' + state.maxCycle;
   document.getElementById('cyclePct').textContent = pct + '%';
 }
+
+// Parse time string "5:00" or "0:30" to seconds
+function parseTimeString(t) {
+  if (!t || t === '0:00' || t.toLowerCase() === 'full cool') return 0;
+  const parts = t.split(':');
+  if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  return 0;
+}
+
+function startCooldown(durationSec) {
+  if (durationSec <= 0) return;
+  cooldownActive = true;
+  cooldownStart = Date.now();
+  cooldownDuration = durationSec;
+  document.getElementById('cooldownRow').style.display = 'flex';
+  clearInterval(cooldownInterval);
+  cooldownInterval = setInterval(() => {
+    const elapsed = (Date.now() - cooldownStart) / 1000;
+    const remaining = Math.max(0, cooldownDuration - elapsed);
+    const mm = Math.floor(remaining / 60), ss = Math.floor(remaining % 60);
+    document.getElementById('progCool').textContent = mm + ':' + String(ss).padStart(2, '0');
+    if (remaining <= 0) {
+      clearInterval(cooldownInterval);
+      cooldownActive = false;
+      document.getElementById('cooldownRow').style.display = 'none';
+      document.getElementById('progCool').textContent = '—';
+    }
+  }, 500);
+}
+
+// Step start time tracking
+window.stepStartTimes = {};
 
 function getActiveProgramDisplay() {
   const profile = programLibrary.profiles.find(p => p.id === activeProfileId);
@@ -1849,6 +1939,9 @@ function clearDisplay() {
   chartData = { rpm:[],amps:[],kv:[],temp:[],labels:[] };
   document.getElementById('logBody').innerHTML = ''; logRowCount = 0; rawCount = 0; sessionData = [];
   state.maxRpm=0; state.maxAmps=0; state.maxKv=0; state.maxTemp=0;
+  window.stepStartTimes = {}; prevStepForCool = 0; prevVolts = 0;
+  clearInterval(cooldownInterval); cooldownActive = false;
+  document.getElementById('cooldownRow').style.display = 'none';
   document.getElementById('rawCount').textContent = '0';
   document.getElementById('sessionCount').textContent = '0';
   ['chartRpm','chartAmps','chartKv','chartTemp'].forEach(id => {
@@ -3054,6 +3147,69 @@ function showBenchmarkResult({ peakRpm, avgRpm, peakCurrentMa, avgCurrentMa, pea
 // Benchmark data collection is handled inside parseLine directly
 
 
+// ═══════════════════════════════════════════════════════════════
+// WAKE LOCK — prevent browser/screen sleep while connected
+// ═══════════════════════════════════════════════════════════════
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) {
+    console.log('[MBC2] Wake Lock API not supported — screen may sleep');
+    return;
+  }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    console.log('[MBC2] Wake Lock acquired — screen will stay on');
+    showToast('Screen sleep disabled while connected');
+    // Re-acquire if released (e.g. tab visibility change)
+    wakeLock.addEventListener('release', () => {
+      console.log('[MBC2] Wake Lock released');
+      if (port) {
+        // Still connected — try to re-acquire
+        setTimeout(requestWakeLock, 1000);
+      }
+    });
+  } catch(e) {
+    console.log('[MBC2] Wake Lock failed:', e.message);
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+    console.log('[MBC2] Wake Lock released — screen sleep re-enabled');
+  }
+}
+
+// Re-acquire wake lock when tab becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && port && !wakeLock) {
+    requestWakeLock();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CLOSE APP — cleanly shuts down the server
+// ═══════════════════════════════════════════════════════════════
+async function closeApp() {
+  if (recording) {
+    if (!confirm('Session is recording. Stop recording and close?')) return;
+    stopRecording();
+  }
+  if (port) {
+    await disconnectSerial();
+  }
+  releaseWakeLock();
+  showToast('Shutting down server...');
+  try {
+    await fetch(API + '/api/shutdown');
+  } catch(e) {}
+  setTimeout(() => {
+    alert('Server stopped. You can now close this tab.');
+  }, 800);
+}
+
 window.addEventListener('load', () => {
   if (!('serial' in navigator)) {
     document.getElementById('noSerialWarning').style.display = 'block';
@@ -3063,7 +3219,7 @@ window.addEventListener('load', () => {
   loadFirmwareList();
   initMotorRegistry();
   loadRegisteredMotors();
-  setInterval(() => fetch(API + '/api/ping').catch(()=>{}), 5000);
+  // No keepalive ping needed — server runs until Close App is clicked
   window.addEventListener('resize', () => {
     if (chartData.rpm.length) {
       drawChart('chartRpm',chartData.rpm,'#00e5ff',null,true);
