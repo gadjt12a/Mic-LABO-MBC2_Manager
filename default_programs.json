@@ -6,6 +6,7 @@
       "name": "Baseline",
       "motor": "Any",
       "chassis": "FM-A",
+      "class": "All",
       "notes": "Standard benchmark program. Run before and after break-in to measure improvement. 5 steps R direction, voltage ramp 1.0V\u21923.0V. Total 3 minutes.",
       "programs": [
         {
@@ -16,11 +17,36 @@
           "targetRpm": 45000,
           "notes": "Standard 5-step voltage ramp benchmark. Run in R direction (race direction for FM-A). No cooldown between steps \u2014 runs straight through. Record RPM and amps at each step for kV curve.",
           "steps": [
-            { "volts": 1.0, "dir": "R", "time": "0:30", "cool": "0:00" },
-            { "volts": 1.5, "dir": "R", "time": "0:30", "cool": "0:00" },
-            { "volts": 2.0, "dir": "R", "time": "0:30", "cool": "0:00" },
-            { "volts": 2.5, "dir": "R", "time": "0:30", "cool": "0:00" },
-            { "volts": 3.0, "dir": "R", "time": "1:00", "cool": "0:00" }
+            {
+              "volts": 1.0,
+              "dir": "R",
+              "time": "0:30",
+              "cool": "0:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "0:30",
+              "cool": "0:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "0:30",
+              "cool": "0:00"
+            },
+            {
+              "volts": 2.5,
+              "dir": "R",
+              "time": "0:30",
+              "cool": "0:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "R",
+              "time": "1:00",
+              "cool": "0:00"
+            }
           ]
         }
       ]
@@ -30,7 +56,8 @@
       "name": "Stock Motor",
       "motor": "Type 130 Stock",
       "chassis": "FM-A",
-      "notes": "Stock motor break-in. 3 cycles. FM-A \u2014 R = race direction.",
+      "class": "Box",
+      "notes": "Stock motor break-in for Box class. 3 cycles. FM-A \u2014 R = race direction.",
       "programs": [
         {
           "id": "stock-001-a",
@@ -40,11 +67,36 @@
           "targetRpm": 30000,
           "notes": "3 cycle brush seating and open. Finishing blast at 4.5V in race direction.",
           "steps": [
-            { "volts": 1.5, "dir": "R", "time": "3:00", "cool": "0:00" },
-            { "volts": 1.5, "dir": "N", "time": "1:00", "cool": "2:00" },
-            { "volts": 3.0, "dir": "R", "time": "3:00", "cool": "0:00" },
-            { "volts": 3.0, "dir": "N", "time": "1:00", "cool": "2:00" },
-            { "volts": 4.5, "dir": "R", "time": "0:40", "cool": "3:00" }
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "3:00",
+              "cool": "0:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "1:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "R",
+              "time": "3:00",
+              "cool": "0:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "N",
+              "time": "1:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.5,
+              "dir": "R",
+              "time": "0:40",
+              "cool": "3:00"
+            }
           ]
         }
       ]
@@ -54,7 +106,8 @@
       "name": "Torque Tuned 2",
       "motor": "Torque Tuned 2",
       "chassis": "FM-A",
-      "notes": "Primary tuned motor. 3-stage break-in. Check logs after A and B before proceeding. FM-A \u2014 R = race direction.",
+      "class": "Evo",
+      "notes": "Primary Evo class motor. 3-stage break-in. Check logs after A and B before proceeding. FM-A \u2014 R = race direction.",
       "programs": [
         {
           "id": "tt2-001-a",
@@ -64,11 +117,36 @@
           "targetRpm": 45000,
           "notes": "Stage 1 \u2014 Brush seating. Low voltage gentle start. Check RPM climbing and amps dropping before running B.",
           "steps": [
-            { "volts": 1.0, "dir": "R", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.0, "dir": "N", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.5, "dir": "R", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.5, "dir": "N", "time": "5:00", "cool": "2:00" },
-            { "volts": 2.0, "dir": "R", "time": "4:00", "cool": "Full Cool" }
+            {
+              "volts": 1.0,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.0,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "Full Cool"
+            }
           ]
         },
         {
@@ -79,11 +157,36 @@
           "targetRpm": 45000,
           "notes": "Stage 2 \u2014 Wake up. Only run if TT2-A shows RPM climbing and amps stable.",
           "steps": [
-            { "volts": 1.5, "dir": "N", "time": "3:00", "cool": "2:00" },
-            { "volts": 1.8, "dir": "R", "time": "2:30", "cool": "2:00" },
-            { "volts": 1.8, "dir": "N", "time": "2:30", "cool": "2:00" },
-            { "volts": 2.0, "dir": "R", "time": "2:00", "cool": "3:00" },
-            { "volts": 2.0, "dir": "N", "time": "2:00", "cool": "Full Cool" }
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "3:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.8,
+              "dir": "R",
+              "time": "2:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.8,
+              "dir": "N",
+              "time": "2:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "2:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "N",
+              "time": "2:00",
+              "cool": "Full Cool"
+            }
           ]
         },
         {
@@ -94,11 +197,166 @@
           "targetRpm": 45000,
           "notes": "Stage 3 \u2014 Polish. Only run if RPM still increasing and heat controlled after B.",
           "steps": [
-            { "volts": 2.2, "dir": "R", "time": "1:30", "cool": "2:00" },
-            { "volts": 2.2, "dir": "N", "time": "1:30", "cool": "2:00" },
-            { "volts": 2.6, "dir": "R", "time": "1:00", "cool": "3:00" },
-            { "volts": 2.6, "dir": "N", "time": "1:00", "cool": "3:00" },
-            { "volts": 4.0, "dir": "R", "time": "0:50", "cool": "Full Cool" }
+            {
+              "volts": 2.2,
+              "dir": "R",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.2,
+              "dir": "N",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.6,
+              "dir": "R",
+              "time": "1:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 2.6,
+              "dir": "N",
+              "time": "1:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "R",
+              "time": "0:50",
+              "cool": "Full Cool"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tuned-ref-001",
+      "name": "Tuned Motor",
+      "motor": "Tuned Motor (MiniMod reference)",
+      "chassis": "FM-A",
+      "class": "Evo",
+      "notes": "MiniMod Garage reference protocol for tuned motors. FM-A \u2014 R = race direction.",
+      "programs": [
+        {
+          "id": "tuned-ref-001-a",
+          "name": "TUNED-A",
+          "mbc2Label": "TNDA",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program A \u2014 Brush seating. 1.0V to 1.5V, gentle ramp.",
+          "steps": [
+            {
+              "volts": 1.0,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.0,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.2,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.2,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "3:00",
+              "cool": "Full Cool"
+            }
+          ]
+        },
+        {
+          "id": "tuned-ref-001-b",
+          "name": "TUNED-B",
+          "mbc2Label": "TNDB",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program B \u2014 Wake up. 1.5V to 2.0V, starts in N direction.",
+          "steps": [
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "3:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.8,
+              "dir": "R",
+              "time": "2:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.8,
+              "dir": "N",
+              "time": "2:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "2:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "N",
+              "time": "2:00",
+              "cool": "Full Cool"
+            }
+          ]
+        },
+        {
+          "id": "tuned-ref-001-c",
+          "name": "TUNED-C",
+          "mbc2Label": "TNDC",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program C \u2014 Polish/Race finish. 2.2V to 4.0V finishing blast.",
+          "steps": [
+            {
+              "volts": 2.2,
+              "dir": "R",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.2,
+              "dir": "N",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.6,
+              "dir": "R",
+              "time": "1:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 2.6,
+              "dir": "N",
+              "time": "1:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "R",
+              "time": "0:50",
+              "cool": "Full Cool"
+            }
           ]
         }
       ]
@@ -108,6 +366,7 @@
       "name": "Hyper Dash",
       "motor": "Hyper Dash",
       "chassis": "FM-A",
+      "class": "Pro",
       "notes": "High RPM speed motor. 3-stage break-in. FM-A \u2014 R = race direction.",
       "programs": [
         {
@@ -118,11 +377,36 @@
           "targetRpm": 45000,
           "notes": "Stage 1 \u2014 Brush seating. Slow controlled start. After: cool fully, light oil on bushings.",
           "steps": [
-            { "volts": 1.0, "dir": "R", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.0, "dir": "N", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.5, "dir": "R", "time": "5:00", "cool": "2:00" },
-            { "volts": 1.5, "dir": "N", "time": "5:00", "cool": "2:00" },
-            { "volts": 2.0, "dir": "R", "time": "4:00", "cool": "Full Cool" }
+            {
+              "volts": 1.0,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.0,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "Full Cool"
+            }
           ]
         },
         {
@@ -133,11 +417,36 @@
           "targetRpm": 45000,
           "notes": "Stage 2 \u2014 Open up. Wake motor without overcooking. Stop if heat climbs too fast.",
           "steps": [
-            { "volts": 2.0, "dir": "N", "time": "4:00", "cool": "2:00" },
-            { "volts": 2.5, "dir": "R", "time": "4:00", "cool": "2:00" },
-            { "volts": 2.5, "dir": "N", "time": "4:00", "cool": "2:00" },
-            { "volts": 3.0, "dir": "R", "time": "3:00", "cool": "3:00" },
-            { "volts": 3.0, "dir": "N", "time": "3:00", "cool": "Full Cool" }
+            {
+              "volts": 2.0,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.5,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.5,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "R",
+              "time": "3:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "N",
+              "time": "3:00",
+              "cool": "Full Cool"
+            }
           ]
         },
         {
@@ -148,11 +457,166 @@
           "targetRpm": 45000,
           "notes": "Stage 3 \u2014 Polish. Short high-voltage hits. Only run if RPM still increasing and heat controlled.",
           "steps": [
-            { "volts": 3.5, "dir": "R", "time": "2:00", "cool": "2:00" },
-            { "volts": 3.5, "dir": "N", "time": "2:00", "cool": "2:00" },
-            { "volts": 4.0, "dir": "R", "time": "1:30", "cool": "2:00" },
-            { "volts": 4.0, "dir": "N", "time": "1:30", "cool": "2:00" },
-            { "volts": 4.5, "dir": "R", "time": "0:40", "cool": "Full Cool" }
+            {
+              "volts": 3.5,
+              "dir": "R",
+              "time": "2:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 3.5,
+              "dir": "N",
+              "time": "2:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "R",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "N",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.5,
+              "dir": "R",
+              "time": "0:40",
+              "cool": "Full Cool"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dash-ref-001",
+      "name": "Dash Motor (reference)",
+      "motor": "Dash Motor (MiniMod reference)",
+      "chassis": "FM-A",
+      "class": "Pro",
+      "notes": "MiniMod Garage reference protocol for Dash motors. FM-A \u2014 R = race direction.",
+      "programs": [
+        {
+          "id": "dash-ref-001-a",
+          "name": "DASH-A",
+          "mbc2Label": "DRFA",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program A \u2014 Brush seating. Same as Hyper Dash A.",
+          "steps": [
+            {
+              "volts": 1.0,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.0,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "R",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 1.5,
+              "dir": "N",
+              "time": "5:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.0,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "Full Cool"
+            }
+          ]
+        },
+        {
+          "id": "dash-ref-001-b",
+          "name": "DASH-B",
+          "mbc2Label": "DRFB",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program B \u2014 Open up. Starts in N direction, ramps to 3.0V.",
+          "steps": [
+            {
+              "volts": 2.0,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.5,
+              "dir": "R",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 2.5,
+              "dir": "N",
+              "time": "4:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "R",
+              "time": "3:00",
+              "cool": "3:00"
+            },
+            {
+              "volts": 3.0,
+              "dir": "N",
+              "time": "3:00",
+              "cool": "Full Cool"
+            }
+          ]
+        },
+        {
+          "id": "dash-ref-001-c",
+          "name": "DASH-C",
+          "mbc2Label": "DRFC",
+          "cycles": 1,
+          "targetRpm": 45000,
+          "notes": "Program C \u2014 Polish/Race finish. High voltage hits up to 4.5V.",
+          "steps": [
+            {
+              "volts": 3.5,
+              "dir": "R",
+              "time": "2:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 3.5,
+              "dir": "N",
+              "time": "2:00",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "R",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.0,
+              "dir": "N",
+              "time": "1:30",
+              "cool": "2:00"
+            },
+            {
+              "volts": 4.5,
+              "dir": "R",
+              "time": "0:40",
+              "cool": "Full Cool"
+            }
           ]
         }
       ]

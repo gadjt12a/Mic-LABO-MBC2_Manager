@@ -1392,26 +1392,59 @@ function addLogRow(row, stepChange) {
 // RECORDING
 // ═══════════════════════════════════════════════════════════════
 function startRecording() {
+  if (!port) { showToast('Connect MBC2 first', true); return; }
+
+  // Benchmark mode
+  if (isBenchmarkSelected()) { startBenchmarkSession(); return; }
+
   sessionData = []; sessionStart = Date.now(); recording = true;
+  logRowCount = 0;
+  document.getElementById('logBody').innerHTML = '';
   document.getElementById('btnRecord').disabled = true;
   document.getElementById('btnStop').disabled = false;
+  document.getElementById('btnSave').disabled = true;
   document.getElementById('runIndicator').style.display = 'inline';
-  setStatus('running', 'Recording');
-  showToast('Ready — start program on MBC2 to begin recording');
   document.getElementById('sessionCount').textContent = 'Waiting...';
+  setStatus('running', 'Recording');
+
+  // Link to motor DB
+  sessionMotorId = activeMotorId;
+  sessionProgramId = resolveSelectedProgramDbId ? resolveSelectedProgramDbId() : null;
+  sessionDbId = null;
+  if (sessionMotorId) {
+    apiPost('/api/motors/session/start', {
+      motor_id: sessionMotorId,
+      program_id: sessionProgramId,
+      session_type: 'Breakin'
+    }).then(data => {
+      if (data?.session_id) {
+        sessionDbId = data.session_id;
+        console.log('[MBC2] DB session started:', sessionDbId);
+      }
+    });
+  }
+
+  showToast('Ready — start program on MBC2 to begin recording');
 }
 
 function stopRecording() {
   recording = false;
-  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnRecord').disabled = !port;
   document.getElementById('btnStop').disabled = true;
   document.getElementById('runIndicator').style.display = 'none';
-  setStatus('connected', 'Connected');
+  setStatus(port ? 'connected' : '', port ? 'Connected' : 'Disconnected');
   if (sessionData.length > 0) {
     document.getElementById('btnSave').disabled = false;
     showToast('Session stopped — ' + sessionData.length + ' rows');
     autoSaveSession();
+    // Finalise DB session
+    if (sessionDbId && sessionMotorId) {
+      console.log('[MBC2] Finalising DB session:', sessionDbId);
+      finaliseSession();
+    }
   }
+  // Reload motor registry to update session counts
+  if (typeof loadRegisteredMotors === 'function') loadRegisteredMotors();
 }
 
 async function autoSaveSession() {
