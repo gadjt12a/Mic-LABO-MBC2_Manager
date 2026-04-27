@@ -2734,6 +2734,8 @@ async function refreshAll() {
 }
 
 async function loadRegisteredMotors() {
+  // Also sync MR.motors so motor registry stays in sync
+  await mrLoadMotors().catch(() => {});
   try {
     const data = await apiGet('/api/motors/all');
     registeredMotors = data ? (data.motors || []) : [];
@@ -2852,8 +2854,13 @@ function resolveSelectedProgramDbId() {
 
 // Motor detail view in Motors tab
 async function mrShowMotorDetail(motorId) {
-  const motor = registeredMotors.find(m => m.motor_id === motorId);
-  if (!motor) return;
+  let motor = MR.motors.find(m => m.motor_id === motorId);
+  // Motor not in local cache yet — reload first
+  if (!motor) {
+    await mrLoadMotors();
+    motor = MR.motors.find(m => m.motor_id === motorId);
+    if (!motor) return;
+  }
 
   const detailEl = document.getElementById('mrMotorDetail');
   if (!detailEl) return;
