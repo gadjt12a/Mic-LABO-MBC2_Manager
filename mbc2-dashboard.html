@@ -2145,6 +2145,7 @@ function switchTab(tab) {
   }
   // Load motors registry when switching to motors tab
   if (tab === 'motors' && typeof mrLoadMotors === 'function') mrLoadMotors();
+  if (tab === 'motors' && typeof loadRoster === 'function') loadRoster();
 }
 
 // ── RAW CONSOLE ───────────────────────────────────────────────────────────────
@@ -3400,6 +3401,8 @@ function stopBenchmarkSession() {
         if (res?.efficiency?.rating) {
           showToast(`Benchmark saved — ${peakRpm.toLocaleString()} RPM — Rating: ${res.efficiency.rating}`);
         }
+        // Refresh roster so rating/efficiency columns update immediately
+        loadRoster();
       });
     }
 
