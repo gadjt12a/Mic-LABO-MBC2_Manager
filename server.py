@@ -24,7 +24,14 @@ DATA_DIR       = BASE_DIR / 'data'
 DB_DIR         = BASE_DIR / 'db'
 DASHBOARD_HTML = BASE_DIR / 'mbc2-dashboard.html'
 PROGRAMS_JSON  = DATA_DIR / 'programs.json'
-SEED_JSON      = DATA_DIR / 'seed_programs.json'
+# Look for seed file in multiple locations
+_seed_candidates = [
+    DATA_DIR / 'seed_programs.json',
+    BASE_DIR / 'default_programs.json',
+    BASE_DIR / 'src' / 'data' / 'default_programs.json',
+    DATA_DIR / 'default_programs.json',
+]
+SEED_JSON = next((p for p in _seed_candidates if p.exists()), _seed_candidates[0])
 
 PORT               = 8766
 
@@ -42,7 +49,7 @@ db.init_db()
 try:
     if not db.get_all_profiles() and SEED_JSON.exists():
         count = db.import_programs_from_json(str(SEED_JSON))
-        print(f'[MBC2] Seeded {count} break-in profiles from seed_programs.json')
+        print(f'[MBC2] Seeded {count} break-in profiles from {SEED_JSON.name}')
 except Exception as e:
     print(f'[MBC2] Seed warning: {e}')
 
