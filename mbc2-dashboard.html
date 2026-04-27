@@ -2278,7 +2278,23 @@ async function mrLoadMotors() {
   try {
     const data = await mrGet(MOTOR_API + '/all');
     MR.motors = data.motors || [];
+
+    // Rebuild counters from existing motors so preview shows correct next number
+    MR.counters = {};
+    MR.motors.forEach(m => {
+      // identifier format: CODE-DIR-NN e.g. UD-R-01
+      const parts = m.identifier.split('-');
+      if (parts.length >= 3) {
+        const num = parseInt(parts[parts.length - 1]);
+        const key = parts.slice(0, -1).join('-'); // everything except last -NN
+        if (!isNaN(num)) {
+          MR.counters[key] = Math.max(MR.counters[key] || 0, num);
+        }
+      }
+    });
+
     mrRenderRegistry();
+    mrUpdatePreview(); // refresh preview with correct next number
   } catch (e) {
     console.warn('[MR] Could not load motors:', e.message);
   }
@@ -2344,18 +2360,38 @@ function mrUpdatePreview() {
   const meta = document.getElementById('mrPreviewMeta');
   const btn = document.getElementById('mrRegBtn');
   const id = mrPreviewId();
+
   if (id) {
     el.textContent = id;
     el.className = 'mr-prev-id';
     meta.innerHTML = `${MR.sel.motor.name} &middot; ${MR.sel.dir === 'R' ? 'Reverse' : 'Forward'} &middot; ${MR.sel.motor.shaft} shaft`;
     btn.disabled = false;
     btn.className = 'mr-reg-btn ready';
+
+    // Show existing motors of same type
+    const key = `${MR.sel.motor.code}-${MR.sel.dir}`;
+    const existing = registeredMotors.filter(m =>
+      m.identifier.startsWith(MR.sel.motor.code + '-' + MR.sel.dir + '-')
+    );
+    const existingEl = document.getElementById('mrExistingMotors');
+    if (existingEl) {
+      if (existing.length) {
+        existingEl.innerHTML = `<span style="color:var(--text3);font-size:10px;letter-spacing:1px;">ALREADY REGISTERED:</span> ` +
+          existing.map(m => `<span style="color:var(--accent2);font-family:var(--display);font-weight:700;font-size:12px;margin-left:8px;">${m.identifier}</span>`).join('');
+        existingEl.style.display = 'block';
+      } else {
+        existingEl.innerHTML = `<span style="color:var(--text3);font-size:10px;">No existing motors of this type</span>`;
+        existingEl.style.display = 'block';
+      }
+    }
   } else {
     el.textContent = MR.sel.motor ? 'Select direction' : 'Select motor + direction';
     el.className = 'mr-prev-id empty';
     meta.textContent = '';
     btn.disabled = true;
     btn.className = 'mr-reg-btn';
+    const existingEl = document.getElementById('mrExistingMotors');
+    if (existingEl) existingEl.style.display = 'none';
   }
 }
 
@@ -2820,11 +2856,13 @@ async function mrShowMotorDetail(motorId) {
     sessHtml = '<div class="mr-empty" style="padding:8px 0">No sessions recorded yet.</div>';
   } else {
     sessions.forEach((s, i) => {
+      const hasData = s.peak_rpm || s.program_name;
       sessHtml += `<div class="mr-session-row">
         <span class="mr-session-type ${s.session_type}">${s.session_type}</span>
         <span style="color:var(--text2);font-family:var(--mono);font-size:11px">${s.program_name || '—'}</span>
         <span class="mr-session-rpm">${s.peak_rpm ? s.peak_rpm.toLocaleString() + ' RPM' : '—'}</span>
-        <button class="mr-compare-btn" id="cmpBtn-${s.session_id}" onclick="mrToggleCompare(${s.session_id}, this)">Compare</button>
+        ${hasData ? `<button class="mr-compare-btn" id="cmpBtn-${s.session_id}" onclick="mrToggleCompare(${s.session_id}, this)">Compare</button>` : '<span></span>'}
+        <button class="mr-compare-btn" style="border-color:var(--danger);color:var(--danger);" onclick="mrDeleteSession(${s.session_id}, ${motorId})">✕ Delete</button>
         <span class="mr-session-date">${(s.session_date||'').slice(0,10)}</span>
       </div>`;
     });
@@ -2837,7 +2875,10 @@ async function mrShowMotorDetail(motorId) {
           <div class="mr-detail-id">${motor.identifier}</div>
           <div class="mr-detail-model">${motor.model_name} · ${motor.breakin_direction === 'R' ? 'Reverse' : 'Forward'}</div>
         </div>
-        <button class="mr-detail-close" onclick="mrCloseDetail()">✕</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="mr-compare-btn" style="border-color:var(--danger);color:var(--danger);" onclick="mrDeleteMotor(${motor.motor_id}, '${motor.identifier}')">✕ Delete Motor</button>
+          <button class="mr-detail-close" onclick="mrCloseDetail()">✕</button>
+        </div>
       </div>
       <div style="font-family:var(--display);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:6px;">SESSIONS</div>
       ${sessHtml}
@@ -2847,6 +2888,40 @@ async function mrShowMotorDetail(motorId) {
 function mrCloseDetail() {
   const el = document.getElementById('mrMotorDetail');
   if (el) el.style.display = 'none';
+}
+
+async function mrDeleteMotor(motorId, identifier) {
+  if (!confirm('Delete motor ' + identifier + '?\nThis will also delete all its sessions and benchmarks.')) return;
+  try {
+    const res = await fetch(API + '/api/motors/' + identifier, { method: 'DELETE' });
+    const data = res.ok ? await res.json() : null;
+    if (data?.ok) {
+      showToast(identifier + ' deleted');
+      mrCloseDetail();
+      loadRegisteredMotors();
+    } else {
+      showToast('Delete failed', true);
+    }
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, true);
+  }
+}
+
+async function mrDeleteSession(sessionId, motorId) {
+  if (!confirm('Delete this session record?')) return;
+  try {
+    const res = await fetch(API + '/api/motors/session/' + sessionId, { method: 'DELETE' });
+    const data = res.ok ? await res.json() : null;
+    if (data?.ok) {
+      showToast('Session deleted');
+      mrShowMotorDetail(motorId); // refresh the detail panel
+      loadRegisteredMotors(); // update session count in list
+    } else {
+      showToast('Delete failed', true);
+    }
+  } catch(e) {
+    showToast('Delete failed: ' + e.message, true);
+  }
 }
 
 // Compare sessions — overlay on RPM chart

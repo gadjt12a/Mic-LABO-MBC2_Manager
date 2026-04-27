@@ -203,6 +203,41 @@ class MBC2Handler(http.server.BaseHTTPRequestHandler):
                 self._json({'error': 'Not found'}, 404)
             return
 
+        # ── Delete motor + all sessions/benchmarks ───────────
+        if path.startswith('/api/motors/') and len(path.split('/')) == 4:
+            identifier = path.split('/')[3]
+            motor = db.get_motor_by_identifier(identifier)
+            if motor:
+                try:
+                    with db.get_connection() as conn:
+                        motor_id = motor['motor_id']
+                        conn.execute('DELETE FROM benchmarks WHERE motor_id = ?', (motor_id,))
+                        conn.execute('DELETE FROM sessions WHERE motor_id = ?', (motor_id,))
+                        conn.execute('DELETE FROM motor_chassis_assignments WHERE motor_id = ?', (motor_id,))
+                        conn.execute('DELETE FROM motors WHERE motor_id = ?', (motor_id,))
+                        conn.commit()
+                    self._json({'ok': True, 'deleted': identifier})
+                    print(f'[MBC2] Motor deleted: {identifier}')
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+            else:
+                self._json({'error': 'Motor not found'}, 404)
+            return
+
+        # ── Delete individual session ─────────────────────────
+        if path.startswith('/api/motors/session/') and not path.endswith('/data'):
+            parts = path.split('/')
+            if len(parts) == 5:
+                try:
+                    session_id = int(parts[4])
+                    with db.get_connection() as conn:
+                        conn.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
+                        conn.commit()
+                    self._json({'ok': True, 'deleted': session_id})
+                except Exception as e:
+                    self._json({'error': str(e)}, 500)
+            return
+
         # ── Clear motor DB sessions ───────────────────────────
         if path.startswith('/api/motors/') and path.endswith('/sessions/clear'):
             parts = path.split('/')
