@@ -45,22 +45,30 @@ If you get an error or a prompt to install developer tools:
 
 ---
 
-## Step 3 — Allow the launcher to run
+## Step 3 — Prepare the launcher to run
 
-Because the launcher file was downloaded from the internet, macOS will block it the first time. You only need to do this once.
+Two things need to happen before the launcher will work. Do both before trying to run it.
 
-1. In Finder, locate **`Start MBC2 Dashboard.command`** in the MBC2 Dashboard folder
-2. **Right-click** it (or Ctrl+click) and select **Open**
-3. A warning will appear saying the file is from an unidentified developer — click **Open** anyway
-4. A Terminal window will open and the server will start
+### 3a — Set execute permission (required)
 
-> After the first time, you can double-click it normally to launch.
+Downloaded files on Mac don't have execute permission by default. Without this, the file will just display its contents as text instead of running.
 
-If macOS won't let you open it even after right-clicking, open Terminal and run this command once (replace the path if your folder is somewhere else):
+1. Open **Terminal** (search for it in Spotlight with `Cmd + Space`)
+2. Type `chmod +x ` (with a space after it — don't press Enter yet)
+3. Open Finder and locate **`Start MBC2 Dashboard.command`** in the MBC2 Dashboard folder
+4. Drag the file into the Terminal window — the full path will be filled in automatically
+5. Press **Enter**
 
-```
-chmod +x ~/Downloads/MBC2_Dashboard/Start\ MBC2\ Dashboard.command
-```
+That's it — you only need to do this once.
+
+### 3b — Allow through Gatekeeper (required on first launch)
+
+Because the file was downloaded from the internet, macOS will warn you the first time:
+
+1. In Finder, **right-click** `Start MBC2 Dashboard.command` and select **Open**
+2. A warning will appear saying the file is from an unidentified developer — click **Open** anyway
+
+> After the first launch, you can double-click it normally.
 
 ---
 
@@ -132,6 +140,7 @@ You can also click **Stop Server** inside the dashboard if the button is visible
 
 - [ ] CH340 driver installed and Mac restarted
 - [ ] Python 3 installed
+- [ ] Execute permission set on launcher (`chmod +x`)
 - [ ] Launcher allowed through Gatekeeper (right-click → Open, first time only)
 - [ ] MBC2 plugged in via USB
 - [ ] Dashboard opened in **Chrome or Edge** (not Safari or Firefox)
